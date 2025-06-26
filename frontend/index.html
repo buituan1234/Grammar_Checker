@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Grammar Checker</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #f8fafc;
+            --error-color: #ef4444;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --text-color: #1f2937;
+            --border-color: #e5e7eb;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+            --spacing: 1rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: var(--spacing);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--primary-color);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .main-content {
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            min-height: 600px;
+        }
+
+        .input-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .language-select {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .text-input {
+            flex: 1;
+            min-height: 400px;
+            padding: 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            line-height: 1.6;
+            resize: vertical;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .check-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .check-btn:hover:not(:disabled) {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+
+        .check-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .results-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stats {
+            background: var(--secondary-color);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            text-align: center;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+            text-transform: uppercase;
+        }
+
+        .highlighted-text {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background: #fefefe;
+            line-height: 1.6;
+            font-size: 1rem;
+            overflow-y: auto;
+            min-height: 200px;
+        }
+
+        .error-highlight {
+            background: rgba(239, 68, 68, 0.2);
+            border-bottom: 2px solid var(--error-color);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .error-highlight:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .suggestions-panel {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background: white;
+        }
+
+        .suggestion-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .suggestion-item:hover {
+            background: var(--secondary-color);
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-error {
+            font-weight: bold;
+            color: var(--error-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .suggestion-message {
+            color: var(--text-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .suggestion-fixes {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .suggestion-fix {
+            background: var(--success-color);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .suggestion-fix:hover {
+            background: #059669;
+            transform: scale(1.05);
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: var(--primary-color);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: var(--error-color);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid #fecaca;
+            margin: 1rem 0;
+        }
+
+        .success-message {
+            background: #f0fdf4;
+            color: var(--success-color);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid #bbf7d0;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                justify-content: center;
+            }
+            
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🤖 AI Grammar Checker</h1>
+            <p>Kiểm tra và chỉnh sửa ngữ pháp thông minh với LanguageTool AI</p>
+        </header>
+
+        <main class="main-content">
+            <section class="input-section">
+                <div class="controls">
+                    <select class="language-select" id="languageSelect">
+                        <option value="en-US">English (US)</option>
+                        <option value="en-GB">English (UK)</option>
+                        <option value="vi">Tiếng Việt</option>
+                        <option value="fr">Français</option>
+                        <option value="de">Deutsch</option>
+                        <option value="es">Español</option>
+                        <option value="it">Italiano</option>
+                        <option value="pt">Português</option>
+                        <option value="ru">Русский</option>
+                        <option value="zh">中文</option>
+                        <option value="ja">日本語</option>
+                        <option value="ko">한국어</option>
+                    </select>
+                    <button class="check-btn" id="checkBtn">
+                        <span id="btnText">Kiểm tra ngữ pháp</span>
+                        <div class="loading hidden" id="loading">
+                            <div class="spinner"></div>
+                            <span>Đang kiểm tra...</span>
+                        </div>
+                    </button>
+                </div>
+                
+                <textarea 
+                    class="text-input" 
+                    id="textInput" 
+                    placeholder="Nhập văn bản cần kiểm tra ngữ pháp tại đây...
+
+Ví dụ: This are a example text with some grammar mistake that need to be fix."
+                ></textarea>
+            </section>
+
+            <section class="results-section">
+                <div class="stats" id="stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="wordCount">0</span>
+                        <span class="stat-label">Từ</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="charCount">0</span>
+                        <span class="stat-label">Ký tự</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="errorCount">0</span>
+                        <span class="stat-label">Lỗi</span>
+                    </div>
+                </div>
+
+                <div class="highlighted-text" id="highlightedText">
+                    <p style="color: #9ca3af; text-align: center; margin-top: 2rem;">
+                        Kết quả kiểm tra sẽ hiển thị tại đây
+                    </p>
+                </div>
+
+                <div class="suggestions-panel hidden" id="suggestionsPanel"></div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        class GrammarChecker {
+            constructor() {
+                this.initializeElements();
+                this.bindEvents();
+                this.currentMatches = [];
+                this.originalText = '';
+            }
+
+            initializeElements() {
+                this.textInput = document.getElementById('textInput');
+                this.checkBtn = document.getElementById('checkBtn');
+                this.btnText = document.getElementById('btnText');
+                this.loading = document.getElementById('loading');
+                this.languageSelect = document.getElementById('languageSelect');
+                this.highlightedText = document.getElementById('highlightedText');
+                this.suggestionsPanel = document.getElementById('suggestionsPanel');
+                this.wordCount = document.getElementById('wordCount');
+                this.charCount = document.getElementById('charCount');
+                this.errorCount = document.getElementById('errorCount');
+            }
+
+            bindEvents() {
+                this.checkBtn.addEventListener('click', () => this.checkGrammar());
+                this.textInput.addEventListener('input', () => this.updateStats());
+                this.textInput.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey && e.key === 'Enter') {
+                        this.checkGrammar();
+                    }
+                });
+            }
+
+            updateStats() {
+                const text = this.textInput.value;
+                const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+                const chars = text.length;
+
+                this.wordCount.textContent = words;
+                this.charCount.textContent = chars;
+            }
+
+            showLoading() {
+                this.btnText.classList.add('hidden');
+                this.loading.classList.remove('hidden');
+                this.checkBtn.disabled = true;
+            }
+
+            hideLoading() {
+                this.btnText.classList.remove('hidden');
+                this.loading.classList.add('hidden');
+                this.checkBtn.disabled = false;
+            }
+
+            showError(message) {
+                this.highlightedText.innerHTML = `
+                    <div class="error-message">
+                        <strong>❌ Lỗi:</strong> ${message}
+                    </div>
+                `;
+            }
+
+            showSuccess() {
+                this.highlightedText.innerHTML = `
+                    <div class="success-message">
+                        <strong>✅ Hoàn hảo!</strong><br>
+                        Không tìm thấy lỗi ngữ pháp nào trong văn bản của bạn.
+                    </div>
+                `;
+            }
+
+            async checkGrammar() {
+                const text = this.textInput.value.trim();
+                const language = this.languageSelect.value;
+
+                if (!text) {
+                    this.showError('Vui lòng nhập văn bản cần kiểm tra');
+                    return;
+                }
+
+                if (text.length > 10000) {
+                    this.showError('Văn bản quá dài. Vui lòng nhập tối đa 10,000 ký tự');
+                    return;
+                }
+
+                this.showLoading();
+                this.originalText = text;
+
+                try {
+                    const result = await this.callLanguageToolAPI(text, language);
+                    this.processResults(result);
+                } catch (error) {
+                    console.error('Grammar check error:', error);
+                    this.showError('Không thể kết nối đến dịch vụ kiểm tra. Vui lòng thử lại sau.');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async callLanguageToolAPI(text, language) {
+                const params = new URLSearchParams({
+                    text: text,
+                    language: language,
+                    enabledOnly: 'false'
+                });
+
+                const response = await fetch('https://api.languagetool.org/v2/check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: params
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                return await response.json();
+            }
+
+            processResults(result) {
+                this.currentMatches = result.matches || [];
+                this.errorCount.textContent = this.currentMatches.length;
+
+                if (this.currentMatches.length === 0) {
+                    this.showSuccess();
+                    this.suggestionsPanel.classList.add('hidden');
+                    return;
+                }
+
+                this.highlightErrors();
+                this.displaySuggestions();
+            }
+
+            highlightErrors() {
+                let highlightedHTML = this.originalText;
+                const matches = [...this.currentMatches].sort((a, b) => b.offset - a.offset);
+
+                matches.forEach((match, index) => {
+                    const before = highlightedHTML.substring(0, match.offset);
+                    const error = highlightedHTML.substring(match.offset, match.offset + match.length);
+                    const after = highlightedHTML.substring(match.offset + match.length);
+                    
+                    highlightedHTML = before + 
+                        `<span class="error-highlight" data-match-index="${index}" title="${match.message}">` +
+                        error + 
+                        '</span>' + 
+                        after;
+                });
+
+                this.highlightedText.innerHTML = highlightedHTML.replace(/\n/g, '<br>');
+
+                // Add click handlers to highlighted errors
+                this.highlightedText.querySelectorAll('.error-highlight').forEach(span => {
+                    span.addEventListener('click', (e) => {
+                        const matchIndex = parseInt(e.target.dataset.matchIndex);
+                        this.scrollToSuggestion(matchIndex);
+                    });
+                });
+            }
+
+            displaySuggestions() {
+                const suggestionsHTML = this.currentMatches.map((match, index) => {
+                    const errorText = this.originalText.substring(match.offset, match.offset + match.length);
+                    const replacements = match.replacements.slice(0, 5); // Limit to 5 suggestions
+
+                    return `
+                        <div class="suggestion-item" data-match-index="${index}">
+                            <div class="suggestion-error">"${errorText}"</div>
+                            <div class="suggestion-message">${match.message}</div>
+                            <div class="suggestion-fixes">
+                                ${replacements.map(replacement => 
+                                    `<span class="suggestion-fix" data-replacement="${replacement.value}">
+                                        ${replacement.value}
+                                    </span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                this.suggestionsPanel.innerHTML = suggestionsHTML;
+                this.suggestionsPanel.classList.remove('hidden');
+
+                // Add click handlers to suggestion fixes
+                this.suggestionsPanel.querySelectorAll('.suggestion-fix').forEach(fix => {
+                    fix.addEventListener('click', (e) => {
+                        const matchIndex = parseInt(e.target.closest('.suggestion-item').dataset.matchIndex);
+                        const replacement = e.target.dataset.replacement;
+                        this.applySuggestion(matchIndex, replacement);
+                    });
+                });
+            }
+
+            applySuggestion(matchIndex, replacement) {
+                const match = this.currentMatches[matchIndex];
+                const currentText = this.textInput.value;
+                
+                const before = currentText.substring(0, match.offset);
+                const after = currentText.substring(match.offset + match.length);
+                
+                this.textInput.value = before + replacement + after;
+                this.updateStats();
+
+                // Update matches offsets for remaining errors
+                const lengthDiff = replacement.length - match.length;
+                this.currentMatches = this.currentMatches.filter((_, index) => index !== matchIndex)
+                    .map(m => {
+                        if (m.offset > match.offset) {
+                            return { ...m, offset: m.offset + lengthDiff };
+                        }
+                        return m;
+                    });
+
+                // Re-render with updated matches
+                this.errorCount.textContent = this.currentMatches.length;
+                if (this.currentMatches.length === 0) {
+                    this.showSuccess();
+                    this.suggestionsPanel.classList.add('hidden');
+                } else {
+                    this.originalText = this.textInput.value;
+                    this.highlightErrors();
+                    this.displaySuggestions();
+                }
+            }
+
+            scrollToSuggestion(matchIndex) {
+                const suggestionItem = this.suggestionsPanel.querySelector(`[data-match-index="${matchIndex}"]`);
+                if (suggestionItem) {
+                    suggestionItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    suggestionItem.style.background = '#fef3c7';
+                    setTimeout(() => {
+                        suggestionItem.style.background = '';
+                    }, 1000);
+                }
+            }
+        }
+
+        // Utility functions
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            const grammarChecker = new GrammarChecker();
+            
+            // Add some sample text for demo
+            const sampleTexts = [
+                "This are a example text with some grammar mistake that need to be fix.",
+                "I have went to the store yesterday and buyed some groceries.",
+                "She don't know how to swimming very good.",
+                "The weather is very nice today, isn't it?"
+            ];
+            
+            // Add sample text button
+            const sampleBtn = document.createElement('button');
+            sampleBtn.textContent = 'Văn bản mẫu';
+            sampleBtn.className = 'check-btn';
+            sampleBtn.style.background = '#6b7280';
+            sampleBtn.style.marginLeft = '0.5rem';
+            sampleBtn.addEventListener('click', () => {
+                const randomText = sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
+                document.getElementById('textInput').value = randomText;
+                grammarChecker.updateStats();
+            });
+            
+            document.querySelector('.controls').appendChild(sampleBtn);
+        });
+
+        // Service Worker for offline capability (optional enhancement)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
