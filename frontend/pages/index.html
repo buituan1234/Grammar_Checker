@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register - AI Grammar Checker</title>
+  <link rel="stylesheet" href="../assets/style/style.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="left-box">
+      <h1>AI Grammar<br>Checker</h1>
+    </div>
+    <div class="register-form">
+      <h2>Register</h2>
+
+      <form id="registerForm">
+        <input id="username" type="text" placeholder="Username" required />
+
+        <div class="password-wrapper">
+          <input id="password" type="password" placeholder="Password" required />
+          <i class="toggle-password" onclick="togglePassword()">👁️</i>
+        </div>
+        <span id="passwordError" class="error-msg"></span>
+
+        <input id="phone" type="tel" placeholder="Phone Number" required />
+        <span id="phoneError" class="error-msg"></span>
+
+        <input id="email" type="email" placeholder="Email" required />
+
+        <label class="remember">
+          <input type="checkbox" /> Remember me
+        </label>
+
+        <button type="submit">Register</button>
+      </form>
+
+      <p class="login-link">
+        Already have an account? <a href="login.html?animate=left">Back to Login</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="../js/index.js"></script>
+  
+</body>
+</html>
