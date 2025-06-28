@@ -16,9 +16,24 @@ function closeModal(modalId) {
 }
 
 function switchModal(closeId, openId) {
-    closeModal(closeId);
-    openModal(openId);
+    const closeModalEl = document.getElementById(closeId);
+    const openModalEl = document.getElementById(openId);
+
+    closeModal(closeId); // đóng modal cũ
+
+    // Xóa class animation cũ nếu có
+    openModalEl.querySelector('.modal-content').classList.remove('slide-left', 'slide-right');
+
+    // Thêm class animation mới
+    if (openId === 'registerModal') {
+        openModalEl.querySelector('.modal-content').classList.add('slide-left');
+    } else if (openId === 'loginModal') {
+        openModalEl.querySelector('.modal-content').classList.add('slide-right');
+    }
+
+    openModal(openId); // mở modal mới
 }
+
 
 function togglePassword(element) {
     const passwordInput = element.previousElementSibling;
@@ -39,33 +54,40 @@ window.onclick = function(event) {
     }
 }
 
-// Handle login
 function handleLogin(event) {
-    event.preventDefault();
+  event.preventDefault();
 
-    const username = document.getElementById('loginUsername').value.trim();
-    const password = document.getElementById('loginPassword').value.trim();
-    const loginError = document.getElementById('loginError');
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  const loginError = document.getElementById('loginError');
 
-    const adminData = JSON.parse(localStorage.getItem('adminData'));
-    const users = JSON.parse(localStorage.getItem('users')) || [];
+  const adminData = JSON.parse(localStorage.getItem('adminData'));
+  const users = JSON.parse(localStorage.getItem('users')) || [];
 
-    if (adminData && username === adminData.username && password === adminData.password) {
-        alert('Admin login successful!');
-        window.location.href = 'admin.html';
-        return;
-    }
+  // Admin login
+  if (adminData && username === adminData.username && password === adminData.password) {
+    showToast("✅ Admin login successful!");
+    setTimeout(() => {
+      window.location.href = 'admin.html';
+    }, 2000);
+    return;
+  }
 
-    const matchedUser = users.find(user => user.username === username && user.password === password);
-    if (matchedUser) {
-        localStorage.setItem('userData', JSON.stringify(matchedUser));
-        alert('User login successful!');
-        window.location.href = 'Grammar-Checker.html';
-        return;
-    }
+  // User login
+  const matchedUser = users.find(user => user.username === username && user.password === password);
+  if (matchedUser) {
+    localStorage.setItem('userData', JSON.stringify(matchedUser));
+    showToast("✅ User login successful!");
+    setTimeout(() => {
+      window.location.href = 'Grammar-Checker.html';
+    }, 2000);
+    return;
+  }
 
-    loginError.textContent = 'Invalid username or password.';
+  // Error
+  loginError.textContent = 'Invalid username or password.';
 }
+
 
 // Handle register
 function handleRegister(event) {
@@ -138,3 +160,23 @@ document.querySelectorAll('a').forEach(link => {
         setTimeout(() => window.location.href = href, 300);
     });
 });
+
+//thông báo đăng nhập thành công 
+function showLoginSuccessToast() {
+  const toast = document.getElementById("loginSuccessToast");
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2000); // Tự động ẩn sau 2 giây
+}
+
+function showToast(message) {
+  const toast = document.getElementById("loginSuccessToast");
+  toast.textContent = message;
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 3000);
+}

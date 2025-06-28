@@ -4,65 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Grammar Checker - AI Enhanced</title>
-  <link rel="icon" href="../assets/image/Logo.jpg" type="image/jpg" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* Custom styles for dropdowns, settings panel, and animations */
-    .lang-dropdown {
-      max-height: 200px;
-      overflow-y: auto;
-      transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-      transform-origin: top;
-    }
-    .lang-dropdown li:hover {
-      background-color: #f1f5f9;
-      cursor: pointer;
-    }
-    .upload-form-overlay {
-      transition: opacity 0.3s ease-in-out;
-    }
-    .settings-panel {
-      transition: transform 0.4s ease-in-out;
-    }
-    .gradient-bg {
-      background: linear-gradient(135deg, #2563eb, #7c3aed);
-    }
-    /* Custom scrollbar for dropdowns */
-    .lang-dropdown::-webkit-scrollbar {
-      width: 8px;
-    }
-    .lang-dropdown::-webkit-scrollbar-thumb {
-      background-color: #cbd5e1;
-      border-radius: 4px;
-    }
-    .lang-dropdown::-webkit-scrollbar-track {
-      background: #f1f5f9;
-    }
-    /* Hover effects for buttons */
-    .btn-hover {
-      transition: transform 0.2s ease, background-color 0.2s ease;
-    }
-    .btn-hover:hover {
-      transform: translateY(-2px);
-    }
-    /* Input focus and hover styles */
-    input:focus, textarea:focus {
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-    }
-  </style>
+  <link rel="icon" href="../assets/images/Logo.jpg" type="image/jpg" />
+
+  <link rel="stylesheet" href="../assets/style/Grammer-Checker.css" />
+  <script src="../js/Grammar-Checker.js" defer></script>
 </head>
 <body class="bg-gray-50 font-sans antialiased">
   <div class="wrapper min-h-screen flex flex-col">
-    <header class="main-header bg-white shadow-lg">
+    <header class="main-header">
       <div class="header-content max-w-full mx-auto px-6 py-4 flex items-center justify-between">
-        <h1 class="header-title text-3xl font-extrabold text-gray-900">Grammar Checker</h1>
+        <h1 class="header-title">Grammar Checker</h1>
         <nav class="nav-menu">
           <ul class="flex space-x-8">
-            <li><a href="#home" class="text-gray-700 hover:text-blue-600 font-medium transition" aria-label="Go to Home">Home</a></li>
-            <li><a href="#features" class="text-gray-700 hover:text-blue-600 font-medium transition" aria-label="Go to Features">Features</a></li>
-            <li><a href="#history" class="text-gray-700 hover:text-blue-600 font-medium transition" aria-label="Go to History">History</a></li>
-            <li><a href="#" onclick="toggleSettingsPanel()" class="text-gray-700 hover:text-blue-600 font-medium transition" aria-label="Open Settings">Settings</a></li>
-            <li><a href="#" onclick="logout()" class="text-gray-700 hover:text-red-600 font-medium transition" aria-label="Logout">Logout</a></li>
+            <li><a href="#" id="grammar-link" aria-label="Go to Grammar Checker">Grammar</a></li>
+            <li><a href="#about" id="about-link" aria-label="Go to About">About</a></li>
+            <li><a href="#features" id="features-link" aria-label="Go to Features">Features</a></li>
+            <li><a href="#testimonials" id="testimonials-link" aria-label="Go to Testimonials">Testimonials</a></li>
+            <li><a href="#faq" id="faq-link" aria-label="Go to FAQ">FAQ</a></li>
+            <li><a href="#" id="settings-link" aria-label="Open Settings">Settings</a></li>
+            <li><a href="#" id="logout-link" aria-label="Logout">Logout</a></li>
           </ul>
         </nav>
       </div>
@@ -72,7 +32,7 @@
       <section class="result-container space-y-8">
         <div class="result-row grid grid-cols-1 md:grid-cols-2 gap-8">
           <!-- Text Input -->
-          <div class="input-text speakable-box bg-white p-8 rounded-xl shadow-md border border-gray-100">
+          <div class="input-text speakable-box">
             <div class="top-bar flex justify-between items-center mb-6">
               <div class="custom-language-dropdown relative w-1/2">
                 <input
@@ -81,33 +41,33 @@
                   id="translateInput"
                   onclick="toggleLangDropdown2()"
                   readonly
-                  class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="w-full"
                   aria-label="Select input language"
                 />
-                <div class="lang-dropdown absolute w-full bg-white shadow-xl rounded-lg mt-2 hidden z-10" id="translateDropdown">
-                  <div class="dropdown-header flex items-center p-3 border-b border-gray-200">
+                <div class="lang-dropdown absolute w-full hidden z-10" id="translateDropdown">
+                  <div class="dropdown-header flex items-center">
                     <input
                       type="text"
                       id="translateSearch"
                       placeholder="Search language..."
                       oninput="filterTranslateLanguages()"
-                      class="w-full p-2 border-none focus:outline-none text-gray-700 bg-gray-50"
+                      class="w-full"
                       aria-label="Search languages"
                     />
-                    <button class="close-btn text-gray-500 hover:text-gray-700 p-2" onclick="closeLangDropdown2()" aria-label="Close language dropdown">
+                    <button class="close-btn" onclick="closeLangDropdown2()" aria-label="Close language dropdown">
                       ✖
                     </button>
                   </div>
                   <ul id="translateList" class="p-3">
-                    <li data-lang="English" class="p-3 rounded-md">English</li>
-                    <li data-lang="Spanish" class="p-3 rounded-md">Spanish</li>
-                    <li data-lang="French" class="p-3 rounded-md">French</li>
-                    <li data-lang="Vietnamese" class="p-3 rounded-md">Vietnamese</li>
-                    <li data-lang="Chinese" class="p-3 rounded-md">Chinese</li>
+                    <li data-lang="English">English</li>
+                    <li data-lang="Spanish">Spanish</li>
+                    <li data-lang="French">French</li>
+                    <li data-lang="Vietnamese">Vietnamese</li>
+                    <li data-lang="Chinese">Chinese</li>
                   </ul>
                 </div>
               </div>
-              <button class="doc-btn bg-blue-600 text-white p-3 rounded-lg btn-hover" onclick="showUploadBox()" aria-label="Upload Document">
+              <button class="doc-btn" onclick="showUploadBox()" aria-label="Upload Document">
                 📄
               </button>
             </div>
@@ -115,36 +75,36 @@
               placeholder="Type or paste your text here..."
               id="inputTextarea"
               rows="6"
-              class="w-full p-4 border border-gray-300 rounded-lg bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full"
               aria-label="Input text area"
             ></textarea>
-            <button class="sound-btn-bottom mt-6 bg-gray-200 p-3 rounded-lg btn-hover" onclick="playInputAudio()" aria-label="Play input audio">
+            <button class="sound-btn-bottom" onclick="playInputAudio()" aria-label="Play input audio">
               🔊
             </button>
           </div>
 
           <!-- Grammar Result -->
-          <div class="result-box speakable-box bg-white p-8 rounded-xl shadow-md border border-gray-100">
+          <div class="result-box speakable-box">
             <div class="result-header">
-              <h2 class="result-title text-xl font-semibold text-green-600">Grammar</h2>
+              <h2 class="result-title green">Grammar</h2>
             </div>
-            <div class="result-body mt-6">
+            <div class="result-body">
               <div class="result-content flex flex-col md:flex-row gap-6">
                 <div class="result-part flex-1">
-                  <p><strong class="text-gray-700">Result:</strong> <span id="grammarResult" class="text-gray-800">Nice job!</span></p>
+                  <p><strong>Result:</strong> <span id="grammarResult">Nice job!</span></p>
                 </div>
                 <div class="result-part flex-1">
-                  <p><strong class="text-gray-700">Recommendations:</strong></p>
-                  <ul id="grammarRecommendations" class="list-disc pl-6 text-gray-800">
+                  <p><strong>Recommendations:</strong></p>
+                  <ul id="grammarRecommendations" class="list-disc pl-6">
                     <li>No issues detected.</li>
                   </ul>
-                  <button class="apply-btn mt-4 bg-green-600 text-white py-2 px-6 rounded-lg btn-hover" onclick="applySuggestion()" aria-label="Apply grammar suggestion">
+                  <button class="apply-btn" onclick="applySuggestion()" aria-label="Apply grammar suggestion">
                     ✔ Apply
                   </button>
                 </div>
               </div>
             </div>
-            <button class="sound-btn-bottom mt-6 bg-gray-200 p-3 rounded-lg btn-hover" onclick="playGrammarAudio()" aria-label="Play grammar audio">
+            <button class="sound-btn-bottom" onclick="playGrammarAudio()" aria-label="Play grammar audio">
               🔊
             </button>
           </div>
@@ -152,9 +112,9 @@
 
         <div class="result-row grid grid-cols-1 md:grid-cols-2 gap-8">
           <!-- Translation -->
-          <div class="translation-box speakable-box bg-white p-8 rounded-xl shadow-md border border-gray-100">
+          <div class="translation-box speakable-box">
             <div class="result-header flex justify-between items-center">
-              <h2 class="result-title text-xl font-semibold text-blue-600">Translation</h2>
+              <h2 class="result-title">Translation</h2>
               <div class="custom-language-dropdown relative w-1/2">
                 <input
                   type="text"
@@ -162,77 +122,151 @@
                   id="translateInputBottom"
                   onclick="toggleLangDropdownBottom()"
                   readonly
-                  class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="w-full"
                   aria-label="Select translation language"
                 />
-                <div class="lang-dropdown absolute w-full bg-white shadow-xl rounded-lg mt-2 hidden z-10" id="translateDropdownBottom">
-                  <div class="dropdown-header flex items-center p-3 border-b border-gray-200">
+                <div class="lang-dropdown absolute w-full hidden z-10" id="translateDropdownBottom">
+                  <div class="dropdown-header flex items-center">
                     <input
                       type="text"
                       id="translateSearchBottom"
                       placeholder="Search..."
                       oninput="filterTranslateLanguagesBottom()"
-                      class="w-full p-2 border-none focus:outline-none text-gray-700 bg-gray-50"
+                      class="w-full"
                       aria-label="Search translation languages"
                     />
-                    <button class="text-gray-500 hover:text-gray-700 p-2" onclick="closeLangDropdownBottom()" aria-label="Close translation dropdown">
+                    <button class="close-btn" onclick="closeLangDropdownBottom()" aria-label="Close translation dropdown">
                       ✖
                     </button>
                   </div>
                   <ul id="translateListBottom" class="p-3">
-                    <li data-lang="English" class="p-3 rounded-md">English</li>
-                    <li data-lang="Spanish" class="p-3 rounded-md">Spanish</li>
-                    <li data-lang="French" class="p-3 rounded-md">French</li>
-                    <li data-lang="Vietnamese" class="p-3 rounded-md">Vietnamese</li>
-                    <li data-lang="Chinese" class="p-3 rounded-md">Chinese</li>
+                    <li data-lang="English">English</li>
+                    <li data-lang="Spanish">Spanish</li>
+                    <li data-lang="French">French</li>
+                    <li data-lang="Vietnamese">Vietnamese</li>
+                    <li data-lang="Chinese">Chinese</li>
                   </ul>
                 </div>
               </div>
             </div>
-            <div class="result-content mt-6 text-gray-800" id="translationContent">
+            <div class="result-content" id="translationContent">
               <p>Your translated text will appear here.</p>
             </div>
-            <button
-              class="sound-btn-bottom mt-6 bg-gray-200 p-3 rounded-lg btn-hover"
-              onclick="playTranslationAudio()"
-              aria-label="Play translation audio"
-            >
+            <button class="sound-btn-bottom" onclick="playTranslationAudio()" aria-label="Play translation audio">
               🔊
             </button>
           </div>
 
           <!-- History -->
-          <div class="history-box bg-white p-8 rounded-xl shadow-md border border-gray-100">
+          <div class="history-box">
             <div class="result-header">
-              <h2 class="result-title text-xl font-semibold text-blue-600">Grammar History</h2>
+              <h2 class="result-title">Grammar History</h2>
             </div>
-            <div class="result-content mt-6 text-gray-800" id="historyContent">
+            <div class="result-content" id="historyContent">
               <p>No history yet.</p>
             </div>
           </div>
         </div>
       </section>
 
+      <!-- About Section -->
+      <section class="about" id="about">
+        <h2>About AI Grammar Editor</h2>
+        <p>AI Grammar Editor is the ultimate solution for fast and accurate text editing. Powered by advanced AI, we not only check grammar but also suggest style improvements, ensuring your writing is always professional and clear.</p>
+        <p>Whether you're a student, writer, or professional, AI Grammar Editor helps you create high-quality content, supports over 20 languages, and integrates with multiple platforms.</p>
+      </section>
+
+      <!-- Features Section -->
+      <section class="features" id="features">
+        <div class="feature-card">
+          <h3>Grammar Check</h3>
+          <p>Detect and correct grammar and spelling errors with precision and speed.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Style Suggestions</h3>
+          <p>Enhance your writing style for clearer, more professional content.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Multilingual Support</h3>
+          <p>Edit text in multiple languages with high accuracy.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Smart AI</h3>
+          <p>Learns and personalizes suggestions based on your writing style.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Seamless Integration</h3>
+          <p>Works smoothly on browsers, mobile apps, and platforms like Word and Google Docs.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Top Security</h3>
+          <p>Your data is encrypted and fully protected, ensuring privacy.</p>
+        </div>
+      </section>
+
+      <!-- Testimonials Section -->
+      <section class="testimonials" id="testimonials">
+        <h2>What Our Users Say</h2>
+        <div class="testimonial-grid">
+          <div class="testimonial-card">
+            <div class="stars">★★★★★</div>
+            <p>"AI Grammar Editor has significantly improved my writing quality. The suggestions are smart and easy to apply!"</p>
+            <h4>John Doe - Writer</h4>
+          </div>
+          <div class="testimonial-card">
+            <div class="stars">★★★★☆</div>
+            <p>"I use this tool for academic papers, and it saves so much time. The support for multiple languages is great!"</p>
+            <h4>Jane Smith - Student</h4>
+          </div>
+          <div class="testimonial-card">
+            <div class="stars">★★★★★</div>
+            <p>"User-friendly interface and highly accurate edits. I'm very satisfied!"</p>
+            <h4>Mike Johnson - Marketing Specialist</h4>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ Section -->
+      <section class="faq" id="faq">
+        <h2>Frequently Asked Questions</h2>
+        <div class="faq-item">
+          <h3>Does AI Grammar Editor support multiple languages?</h3>
+          <p>Yes, we support over 20 languages with high accuracy.</p>
+        </div>
+        <div class="faq-item">
+          <h3>Can I use it for free?</h3>
+          <p>You can use the free version with basic features. Paid plans offer advanced functionalities.</p>
+        </div>
+        <div class="faq-item">
+          <h3>Is my data secure?</h3>
+          <p>We use high-level encryption to protect your data. Privacy is our top priority.</p>
+        </div>
+        <div class="faq-item">
+          <h3>Can the tool integrate with other software?</h3>
+          <p>Yes, AI Grammar Editor seamlessly integrates with Microsoft Word, Google Docs, and more.</p>
+        </div>
+      </section>
+
       <!-- Upload Form -->
-      <div id="uploadFormContainer" class="upload-form-overlay fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-20">
-        <div class="upload-form-box bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
-          <h3 class="text-xl font-semibold text-gray-900 mb-6">Upload a Document</h3>
-          <div class="form-group mb-6">
-            <label for="documentFile" class="custom-file-label block mb-2 text-gray-700 font-medium">📎 Choose File</label>
+      <div id="uploadFormContainer" class="upload-form-overlay hidden">
+        <div class="upload-form-box">
+          <h3>Upload a Document</h3>
+          <div class="form-group">
+            <label for="documentFile" class="custom-file-label">📎 Choose File</label>
             <input
               type="file"
               id="documentFile"
               accept=".txt,.doc,.docx,.pdf"
-              class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-800"
+              class="hidden"
               aria-label="Select document to upload"
             />
-            <span id="file-name-display" class="block mt-3 text-gray-600 text-sm">No file chosen</span>
+            <span id="file-name-display">No file chosen</span>
           </div>
           <div class="form-actions flex space-x-4">
-            <button onclick="uploadDocument()" class="bg-blue-600 text-white py-2 px-6 rounded-lg btn-hover" aria-label="Upload document">
+            <button onclick="uploadDocument()" aria-label="Upload document">
               Upload
             </button>
-            <button onclick="closeUploadForm()" class="bg-gray-300 text-gray-800 py-2 px-6 rounded-lg btn-hover" aria-label="Cancel upload">
+            <button onclick="closeUploadForm()" aria-label="Cancel upload">
               Cancel
             </button>
           </div>
@@ -240,98 +274,116 @@
       </div>
 
       <!-- Settings Panel -->
-      <aside id="settingsPanel" class="settings-panel fixed top-0 right-0 h-full w-96 bg-white shadow-2xl p-8 transform translate-x-full z-30" role="dialog">
-        <button class="close-settings absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl" onclick="closeSettingsPanel()" aria-label="Close settings">
-          ✖
-        </button>
-        <h3 class="text-xl font-semibold text-gray-900 mb-6">Account Settings</h3>
-        <div class="avatar-upload text-center mb-8" onclick="triggerAvatarInput()">
-          <img id="previewAvatar" src="../assets/image/future.jpg" ... />
+<aside id="settingsPanel" class="settings-panel" role="dialog">
+  <!-- Close Button -->
+  <button class="close-settings" onclick="closeSettingsPanel()" aria-label="Close settings">✖</button>
 
-          <input
-            type="file"
-            id="avatarInput"
-            accept="image/*"
-            onchange="previewAvatar(event)"
-            class="hidden"
-          />
-          <p class="avatar-note text-sm text-gray-600 mt-3">Click to change avatar</p>
-        </div>
-        <div class="user-info-settings space-y-6">
-          <div class="form-group">
-            <label for="settingUsername" class="block text-gray-700 font-medium mb-2">Username</label>
-            <input
-              type="text"
-              id="settingUsername"
-              value="..."
-              class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="Username"
-            />
-          </div>
-          <div class="form-group">
-            <label for="settingEmail" class="block text-gray-700 font-medium mb-2">Email</label>
-            <input
-              type="email"
-              id="settingEmail"
-              value="..."
-              class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="Email"
-            />
-          </div>
-          <div class="form-group">
-            <label for="settingPhone" class="block text-gray-700 font-medium mb-2">Phone</label>
-            <input
-              type="tel"
-              id="settingPhone"
-              value="..."
-              class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="Phone"
-            />
-          </div>
-          <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-3 rounded-lg btn-hover" aria-label="Save settings">
-            Save Changes
-          </button>
-        </div>
-        <button class="logout-btn w-full mt-6 bg-red-600 text-white py-3 rounded-lg btn-hover" onclick="logout()">Logout</button>
-      </aside>
-    </main>
+  <!-- Avatar Section -->
+  <h3 class="account-header">Account Settings</h3>
+  <div class="avatar-upload" onclick="triggerAvatarInput()">
+    <img id="previewAvatar" src="https://via.placeholder.com/120/ffffff/000000?text=Person" alt="User Avatar" />
+    <input type="file" id="avatarInput" accept="image/*" onchange="previewAvatar(event)" class="hidden" />
+    <p class="avatar-note">Click to change avatar</p>
+  </div>
 
-    <script src="../js/Grammar-Checker.js"></script>
+  <!-- User Information (read-only) -->
+  <div class="user-info-settings">
+    <div class="form-group">
+      <label for="settingUsername">Username</label>
+      <input type="text" id="settingUsername" value="..." readonly aria-label="Username" />
+    </div>
+    <div class="form-group">
+      <label for="settingEmail">Email</label>
+      <input type="email" id="settingEmail" value="..." readonly aria-label="Email" />
+    </div>
+    <div class="form-group">
+      <label for="settingPhone">Phone</label>
+      <input type="tel" id="settingPhone" value="..." readonly aria-label="Phone" />
+    </div>
+  </div>
+
+  <!-- Language Selection -->
+  <div class="form-group">
+    <label for="languageSelect">Language</label>
+    <select id="languageSelect" aria-label="Language select">
+      <option value="en">English</option>
+      <option value="vi">Tiếng Việt</option>
+      <option value="fr">Français</option>
+      <option value="de">Deutsch</option>
+      <!-- Add more languages as needed -->
+    </select>
+  </div>
+
+  <!-- Theme Toggle -->
+  <div class="form-group">
+    <label for="themeToggle">Theme</label>
+    <select id="themeToggle" onchange="toggleTheme()" aria-label="Theme">
+      <option value="light">Light Mode</option>
+      <option value="dark">Dark Mode</option>
+    </select>
+  </div>
+
+  <!-- Save and Logout -->
+  <button class="save-btn" onclick="saveSettings()" aria-label="Save settings">Save Changes</button>
+  <button class="logout-btn" id="logout-btn" aria-label="Logout">Logout</button>
+</aside>
+
+<!-- Logout Confirmation Modal -->
+<div id="logoutConfirmModal" class="hidden">  
+  <div class="modal-box">
+    <div class="modal-title">Are you sure you want to log out?</div>
+    <div class="modal-actions">
+      <button onclick="confirmLogout()" class="confirm-logout">Yes</button>
+      <button onclick="closeLogoutModal()" class="cancel-logout">No</button>
+    </div>
+  </div>
+</div>
 
 
-    <script>
-      // JavaScript for settings panel slide-in/out and avatar preview
-      function toggleSettingsPanel() {
-        const panel = document.getElementById('settingsPanel');
-        panel.classList.toggle('translate-x-full');
-      }
 
-      function closeSettingsPanel() {
-        document.getElementById('settingsPanel').classList.add('translate-x-full');
-      }
 
-      function previewAvatar(event) {
-        const reader = new FileReader();
-        reader.onload = function() {
-          document.getElementById('previewAvatar').src = reader.result;
-        };
-        reader.readAsDataURL(event.target.files[0]);
-      }
 
-      function triggerAvatarInput() {
-        document.getElementById('avatarInput').click();
-      }
 
-      function saveSettings() {
-        const username = document.getElementById('settingUsername').value;
-        const email = document.getElementById('settingEmail').value;
-        const phone = document.getElementById('settingPhone').value;
-        // Placeholder for saving settings to backend
-        console.log('Saving settings:', { username, email, phone });
-        // Add your backend integration here
-        alert('Settings saved successfully!');
-      }
-    </script>
+<!-- Footer Section -->
+<footer class="footer" id="contact">
+  <div class="footer-container">
+    <!-- Contact Info -->
+    <div class="footer-left">
+      <h3>Contact Us</h3>
+      <p>Email: support@aigrammar.com</p>
+      <p>Phone: +84 123 456 789</p>
+      <p>Address: 123 AI Street, Hanoi, Vietnam</p>
+    </div>
+
+    <!-- Social Media -->
+    <div class="footer-right">
+      <h3>Follow Us</h3>
+      <div class="social-icons">
+        <a href="https://facebook.com" target="_blank" aria-label="Facebook">
+          <img src="../assets/images/facebook-icon.png" alt="Facebook">
+        </a>
+        <a href="https://twitter.com" target="_blank" aria-label="Twitter">
+          <img src="../assets/images/twitter-icon.png" alt="Twitter">
+        </a>
+        <a href="https://linkedin.com" target="_blank" aria-label="LinkedIn">
+          <img src="../assets/images/linkedin-icon.png" alt="LinkedIn">
+        </a>
+        <a href="https://aigrammar.com" target="_blank" aria-label="Website">
+          <img src="../assets/images/web-icon.png" alt="Website">
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <p>© 2025 AI Grammar Editor. All rights reserved.</p>
+  </div>
+</footer>
+  
+
+
+
+
   </div>
 </body>
 </html>
