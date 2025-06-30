@@ -1,389 +1,350 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Grammar Checker - AI Enhanced</title>
-  <link rel="icon" href="../assets/images/Logo.jpg" type="image/jpg" />
-
-  <link rel="stylesheet" href="../assets/style/Grammer-Checker.css" />
-  <script src="../js/Grammar-Checker.js" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Grammar Editor - Grammar Checker</title>
+    <link rel="icon" href="../assets/images/Logo.jpg" type="image/jpg" />
+    <link rel="stylesheet" href="../assets/style/Grammer-Checker.css" />
+    <script src="../js/Grammar-Checker.js" defer></script>
 </head>
-<body class="bg-gray-50 font-sans antialiased">
-  <div class="wrapper min-h-screen flex flex-col">
-    <header class="main-header">
-      <div class="header-content max-w-full mx-auto px-6 py-4 flex items-center justify-between">
-        <h1 class="header-title">Grammar Checker</h1>
-        <nav class="nav-menu">
-          <ul class="flex space-x-8">
-            <li><a href="#" id="grammar-link" aria-label="Go to Grammar Checker">Grammar</a></li>
-            <li><a href="#about" id="about-link" aria-label="Go to About">About</a></li>
-            <li><a href="#features" id="features-link" aria-label="Go to Features">Features</a></li>
-            <li><a href="#testimonials" id="testimonials-link" aria-label="Go to Testimonials">Testimonials</a></li>
-            <li><a href="#faq" id="faq-link" aria-label="Go to FAQ">FAQ</a></li>
-            <li><a href="#" id="settings-link" aria-label="Open Settings">Settings</a></li>
-            <li><a href="#" id="logout-link" aria-label="Logout">Logout</a></li>
-          </ul>
+<body>
+    <header>
+        <nav>
+            <div class="logo">AI Grammar Editor</div>
+            <ul>
+                <li><a href="#grammar" id="grammar-link" aria-label="Go to Grammar Checker">Grammar</a></li>
+                <li><a href="#about" id="about-link" aria-label="Go to About">About</a></li>
+                <li><a href="#features" id="features-link" aria-label="Go to Features">Features</a></li>
+                <li><a href="#testimonials" id="testimonials-link" aria-label="Go to Testimonials">Testimonials</a></li>
+                <li><a href="#faq" id="faq-link" aria-label="Go to FAQ">FAQ</a></li>
+                <li><a href="#" id="settings-link" aria-label="Open Settings">Settings</a></li>
+                <li><a href="#" id="logout-link" aria-label="Logout">Logout</a></li>
+            </ul>
         </nav>
-      </div>
     </header>
 
-    <main class="container max-w-full mx-auto px-6 py-10 flex-grow">
-      <section class="result-container space-y-8">
-        <div class="result-row grid grid-cols-1 md:grid-cols-2 gap-8">
-          <!-- Text Input -->
-          <div class="input-text speakable-box">
-            <div class="top-bar flex justify-between items-center mb-6">
-              <div class="custom-language-dropdown relative w-1/2">
-                <input
-                  type="text"
-                  placeholder="Select Language..."
-                  id="translateInput"
-                  onclick="toggleLangDropdown2()"
-                  readonly
-                  class="w-full"
-                  aria-label="Select input language"
-                />
-                <div class="lang-dropdown absolute w-full hidden z-10" id="translateDropdown">
-                  <div class="dropdown-header flex items-center">
-                    <input
-                      type="text"
-                      id="translateSearch"
-                      placeholder="Search language..."
-                      oninput="filterTranslateLanguages()"
-                      class="w-full"
-                      aria-label="Search languages"
-                    />
-                    <button class="close-btn" onclick="closeLangDropdown2()" aria-label="Close language dropdown">
-                      ✖
+    <main>
+        <section class="editor-container" id="grammar">
+            <div class="editor-row">
+                <div class="input-text speakable-box">
+                    <div class="top-bar">
+                        <div class="custom-language-dropdown">
+                            <input
+                                type="text"
+                                placeholder="Select Language..."
+                                id="translateInput"
+                                onclick="toggleLangDropdown2()"
+                                readonly
+                                aria-label="Select input language"
+                            />
+                            <div class="lang-dropdown" id="translateDropdown">
+                                <div class="dropdown-header">
+                                    <input
+                                        type="text"
+                                        id="translateSearch"
+                                        placeholder="Search language..."
+                                        oninput="filterTranslateLanguages()"
+                                        aria-label="Search languages"
+                                    />
+                                    <button class="close-btn" onclick="closeLangDropdown2()" aria-label="Close language dropdown">
+                                        ✖
+                                    </button>
+                                </div>
+                                <ul id="translateList">
+                                    <li data-lang="English">English</li>
+                                    <li data-lang="Spanish">Spanish</li>
+                                    <li data-lang="French">French</li>
+                                    <li data-lang="Vietnamese">Vietnamese</li>
+                                    <li data-lang="Chinese">Chinese</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <button class="doc-btn" onclick="showUploadBox()" aria-label="Upload Document">
+                            📄
+                        </button>
+                    </div>
+                    <textarea
+                        placeholder="Type or paste your text here..."
+                        id="inputTextarea"
+                        rows="6"
+                        aria-label="Input text area"
+                    ></textarea>
+                    <button class="sound-btn-bottom" onclick="playInputAudio()" aria-label="Play input audio">
+                        🔊
                     </button>
-                  </div>
-                  <ul id="translateList" class="p-3">
-                    <li data-lang="English">English</li>
-                    <li data-lang="Spanish">Spanish</li>
-                    <li data-lang="French">French</li>
-                    <li data-lang="Vietnamese">Vietnamese</li>
-                    <li data-lang="Chinese">Chinese</li>
-                  </ul>
                 </div>
-              </div>
-              <button class="doc-btn" onclick="showUploadBox()" aria-label="Upload Document">
-                📄
-              </button>
-            </div>
-            <textarea
-              placeholder="Type or paste your text here..."
-              id="inputTextarea"
-              rows="6"
-              class="w-full"
-              aria-label="Input text area"
-            ></textarea>
-            <button class="sound-btn-bottom" onclick="playInputAudio()" aria-label="Play input audio">
-              🔊
-            </button>
-          </div>
 
-          <!-- Grammar Result -->
-          <div class="result-box speakable-box">
-            <div class="result-header">
-              <h2 class="result-title green">Grammar</h2>
-            </div>
-            <div class="result-body">
-              <div class="result-content flex flex-col md:flex-row gap-6">
-                <div class="result-part flex-1">
-                  <p><strong>Result:</strong> <span id="grammarResult">Nice job!</span></p>
-                </div>
-                <div class="result-part flex-1">
-                  <p><strong>Recommendations:</strong></p>
-                  <ul id="grammarRecommendations" class="list-disc pl-6">
-                    <li>No issues detected.</li>
-                  </ul>
-                  <button class="apply-btn" onclick="applySuggestion()" aria-label="Apply grammar suggestion">
-                    ✔ Apply
-                  </button>
-                </div>
-              </div>
-            </div>
-            <button class="sound-btn-bottom" onclick="playGrammarAudio()" aria-label="Play grammar audio">
-              🔊
-            </button>
-          </div>
-        </div>
-
-        <div class="result-row grid grid-cols-1 md:grid-cols-2 gap-8">
-          <!-- Translation -->
-          <div class="translation-box speakable-box">
-            <div class="result-header flex justify-between items-center">
-              <h2 class="result-title">Translation</h2>
-              <div class="custom-language-dropdown relative w-1/2">
-                <input
-                  type="text"
-                  placeholder="Select Language..."
-                  id="translateInputBottom"
-                  onclick="toggleLangDropdownBottom()"
-                  readonly
-                  class="w-full"
-                  aria-label="Select translation language"
-                />
-                <div class="lang-dropdown absolute w-full hidden z-10" id="translateDropdownBottom">
-                  <div class="dropdown-header flex items-center">
-                    <input
-                      type="text"
-                      id="translateSearchBottom"
-                      placeholder="Search..."
-                      oninput="filterTranslateLanguagesBottom()"
-                      class="w-full"
-                      aria-label="Search translation languages"
-                    />
-                    <button class="close-btn" onclick="closeLangDropdownBottom()" aria-label="Close translation dropdown">
-                      ✖
+                <div class="result-box speakable-box">
+                    <div class="result-header">
+                        <h2 class="result-title green">Grammar</h2>
+                    </div>
+                    <div class="result-body">
+                        <div class="result-content">
+                            <div class="result-part">
+                                <p><strong>Result:</strong> <span id="grammarResult">Nice job!</span></p>
+                            </div>
+                            <div class="result-part">
+                                <p><strong>Recommendations:</strong></p>
+                                <ul id="grammarRecommendations">
+                                    <li>No issues detected.</li>
+                                </ul>
+                                <button class="apply-btn" onclick="applySuggestion()" aria-label="Apply grammar suggestion">
+                                    ✔ Apply
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="sound-btn-bottom" onclick="playGrammarAudio()" aria-label="Play grammar audio">
+                        🔊
                     </button>
-                  </div>
-                  <ul id="translateListBottom" class="p-3">
-                    <li data-lang="English">English</li>
-                    <li data-lang="Spanish">Spanish</li>
-                    <li data-lang="French">French</li>
-                    <li data-lang="Vietnamese">Vietnamese</li>
-                    <li data-lang="Chinese">Chinese</li>
-                  </ul>
                 </div>
-              </div>
             </div>
-            <div class="result-content" id="translationContent">
-              <p>Your translated text will appear here.</p>
+
+            <div class="editor-row">
+                <div class="translation-box speakable-box">
+                    <div class="result-header">
+                        <h2 class="result-title">Translation</h2>
+                        <div class="custom-language-dropdown">
+                            <input
+                                type="text"
+                                placeholder="Select Language..."
+                                id="translateInputBottom"
+                                onclick="toggleLangDropdownBottom()"
+                                readonly
+                                aria-label="Select translation language"
+                            />
+                            <div class="lang-dropdown" id="translateDropdownBottom">
+                                <div class="dropdown-header">
+                                    <input
+                                        type="text"
+                                        id="translateSearchBottom"
+                                        placeholder="Search..."
+                                        oninput="filterTranslateLanguagesBottom()"
+                                        aria-label="Search translation languages"
+                                    />
+                                    <button class="close-btn" onclick="closeLangDropdownBottom()" aria-label="Close translation dropdown">
+                                        ✖
+                                    </button>
+                                </div>
+                                <ul id="translateListBottom">
+                                    <li data-lang="English">English</li>
+                                    <li data-lang="Spanish">Spanish</li>
+                                    <li data-lang="French">French</li>
+                                    <li data-lang="Vietnamese">Vietnamese</li>
+                                    <li data-lang="Chinese">Chinese</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="result-content" id="translationContent">
+                        <p>Your translated text will appear here.</p>
+                    </div>
+                    <button class="sound-btn-bottom" onclick="playTranslationAudio()" aria-label="Play translation audio">
+                        🔊
+                    </button>
+                </div>
+
+                <div class="history-box">
+                    <div class="result-header">
+                        <h2 class="result-title">Grammar History</h2>
+                    </div>
+                    <div class="result-content" id="historyContent">
+                        <p>No history yet.</p>
+                    </div>
+                </div>
             </div>
-            <button class="sound-btn-bottom" onclick="playTranslationAudio()" aria-label="Play translation audio">
-              🔊
-            </button>
-          </div>
+        </section>
 
-          <!-- History -->
-          <div class="history-box">
-            <div class="result-header">
-              <h2 class="result-title">Grammar History</h2>
+        <section class="about" id="about">
+            <h2>About AI Grammar Editor</h2>
+            <p>AI Grammar Editor is the ultimate solution for fast and accurate text editing. Powered by advanced AI, we not only check grammar but also suggest style improvements, ensuring your writing is always professional and clear.</p>
+            <p>Whether you're a student, writer, or professional, AI Grammar Editor helps you create high-quality content, supports over 20 languages, and integrates with multiple platforms.</p>
+        </section>
+
+        <section class="features" id="features">
+            <div class="feature-card">
+                <h3>Grammar Check</h3>
+                <p>Detect and correct grammar and spelling errors with precision and speed.</p>
             </div>
-            <div class="result-content" id="historyContent">
-              <p>No history yet.</p>
+            <div class="feature-card">
+                <h3>Style Suggestions</h3>
+                <p>Enhance your writing style for clearer, more professional content.</p>
             </div>
-          </div>
+            <div class="feature-card">
+                <h3>Multilingual Support</h3>
+                <p>Edit text in multiple languages with high accuracy.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Smart AI</h3>
+                <p>Learns and personalizes suggestions based on your writing style.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Seamless Integration</h3>
+                <p>Works smoothly on browsers, mobile apps, and platforms like Word and Google Docs.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Top Security</h3>
+                <p>Your data is encrypted and fully protected, ensuring privacy.</p>
+            </div>
+        </section>
+
+        <section class="testimonials" id="testimonials">
+            <h2>What Our Users Say</h2>
+            <div class="testimonial-grid">
+                <div class="testimonial-card">
+                    <div class="stars">★★★★★</div>
+                    <p>"AI Grammar Editor has significantly improved my writing quality. The suggestions are smart and easy to apply!"</p>
+                    <h4>John Doe - Writer</h4>
+                </div>
+                <div class="testimonial-card">
+                    <div class="stars">★★★★☆</div>
+                    <p>"I use this tool for academic papers, and it saves so much time. The support for multiple languages is great!"</p>
+                    <h4>Jane Smith - Student</h4>
+                </div>
+                <div class="testimonial-card">
+                    <div class="stars">★★★★★</div>
+                    <p>"User-friendly interface and highly accurate edits. I'm very satisfied!"</p>
+                    <h4>Mike Johnson - Marketing Specialist</h4>
+                </div>
+            </div>
+        </section>
+
+        <section class="faq" id="faq">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-item">
+                <h3>Does AI Grammar Editor support multiple languages?</h3>
+                <p>Yes, we support over 20 languages with high accuracy.</p>
+            </div>
+            <div class="faq-item">
+                <h3>Can I use it for free?</h3>
+                <p>You can use the free version with basic features. Paid plans offer advanced functionalities.</p>
+            </div>
+            <div class="faq-item">
+                <h3>Is my data secure?</h3>
+                <p>We use high-level encryption to protect your data. Privacy is our top priority.</p>
+            </div>
+            <div class="faq-item">
+                <h3>Can the tool integrate with other software?</h3>
+                <p>Yes, AI Grammar Editor seamlessly integrates with Microsoft Word, Google Docs, and more.</p>
+            </div>
+        </section>
+
+        <div id="uploadFormContainer" class="upload-form-overlay hidden">
+            <div class="upload-form-box">
+                <h3>Upload a Document</h3>
+                <div class="form-group">
+                    <label for="documentFile" class="custom-file-label">📎 Choose File</label>
+                    <input
+                        type="file"
+                        id="documentFile"
+                        accept=".txt,.doc,.docx,.pdf"
+                        class="hidden"
+                        aria-label="Select document to upload"
+                    />
+                    <span id="file-name-display">No file chosen</span>
+                </div>
+                <div class="form-actions">
+                    <button onclick="uploadDocument()" aria-label="Upload document">
+                        Upload
+                    </button>
+                    <button onclick="closeUploadForm()" aria-label="Cancel upload">
+                        Cancel
+                    </button>
+                </div>
+            </div>
         </div>
-      </section>
 
-      <!-- About Section -->
-      <section class="about" id="about">
-        <h2>About AI Grammar Editor</h2>
-        <p>AI Grammar Editor is the ultimate solution for fast and accurate text editing. Powered by advanced AI, we not only check grammar but also suggest style improvements, ensuring your writing is always professional and clear.</p>
-        <p>Whether you're a student, writer, or professional, AI Grammar Editor helps you create high-quality content, supports over 20 languages, and integrates with multiple platforms.</p>
-      </section>
+        <aside id="settingsPanel" class="settings-panel" role="dialog">
+            <button class="close-settings" onclick="closeSettingsPanel()" aria-label="Close settings">✖</button>
+            <h3 class="account-header">Account Settings</h3>
+            <div class="avatar-upload" onclick="triggerAvatarInput()">
+                <img id="previewAvatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2'/%3E%3C/svg%3E" alt="User Avatar" />
+                <input type="file" id="avatarInput" accept="image/*" onchange="previewAvatar(event)" class="hidden" />
+                <p class="avatar-note">Click to change avatar</p>
+            </div>
+            <div class="user-info-settings">
+                <div class="form-group">
+                    <label for="settingUsername">Username</label>
+                    <input type="text" id="settingUsername" readonly aria-label="Username" />
+                </div>
+                <div class="form-group">
+                    <label for="settingEmail">Email</label>
+                    <input type="email" id="settingEmail" readonly aria-label="Email" />
+                </div>
+                <div class="form-group">
+                    <label for="settingPhone">Phone</label>
+                    <input type="tel" id="settingPhone" readonly aria-label="Phone" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="languageSelect">Language</label>
+                <select id="languageSelect" aria-label="Language select">
+                    <option value="en">English</option>
+                    <option value="vi">Tiếng Việt</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="themeToggle">Theme</label>
+                <select id="themeToggle" onchange="toggleTheme()" aria-label="Theme">
+                    <option value="light">Light Mode</option>
+                    <option value="dark">Dark Mode</option>
+                </select>
+            </div>
+            <button class="save-btn" onclick="saveSettings()" aria-label="Save settings">Save Changes</button>
+            <button class="logout-btn" onclick="showLogoutModal()" aria-label="Logout">Logout</button>
+        </aside>
 
-      <!-- Features Section -->
-      <section class="features" id="features">
-        <div class="feature-card">
-          <h3>Grammar Check</h3>
-          <p>Detect and correct grammar and spelling errors with precision and speed.</p>
+        <div id="logoutConfirmModal" class="hidden">
+            <div class="modal-box">
+                <div class="modal-title">Are you sure you want to log out?</div>
+                <div class="modal-actions">
+                    <button onclick="confirmLogout()" class="confirm-logout">Yes, Log Out</button>
+                    <button onclick="closeLogoutModal()" class="cancel-logout">Cancel</button>
+                </div>
+            </div>
         </div>
-        <div class="feature-card">
-          <h3>Style Suggestions</h3>
-          <p>Enhance your writing style for clearer, more professional content.</p>
+    </main>
+
+    <footer class="footer" id="contact">
+        <div class="footer-container">
+            <div class="footer-left">
+                <h3>Contact Us</h3>
+                <p>Email: support@aigrammar.com</p>
+                <p>Phone: +84 123 456 789</p>
+                <p>Address: 123 AI Street, Hanoi, Vietnam</p>
+            </div>
+            <div class="footer-right">
+                <h3>Follow Us</h3>
+                <div class="social-icons">
+                    <a href="https://facebook.com" target="_blank" aria-label="Facebook">
+                        <svg width="30" height="30" fill="white" viewBox="0 0 24 24">
+                            <path d="M22.675 0h-21.35C.6 0 0 .6 0 1.326v21.348C0 23.4.6 24 1.326 24h11.494v-9.294H9.691v-3.622h3.129V8.413c0-3.1 1.894-4.788 4.659-4.788 1.325 0 2.464.099 2.797.143v3.24l-1.918.001c-1.504 0-1.796.715-1.796 1.763v2.311h3.587l-.467 3.622h-3.12V24h6.116C23.4 24 24 23.4 24 22.674V1.326C24 .6 23.4 0 22.675 0z"/>
+                        </svg>
+                    </a>
+                    <a href="https://twitter.com" target="_blank" aria-label="Twitter">
+                        <svg width="30" height="30" fill="white" viewBox="0 0 24 24">
+                            <path d="M23.643 4.937a9.6 9.6 0 01-2.828.775 4.93 4.93 0 002.165-2.723 9.723 9.723 0 01-3.104 1.184 4.916 4.916 0 00-8.384 4.482A13.942 13.942 0 013.16 3.157a4.914 4.914 0 001.523 6.573A4.902 4.902 0 012.8 9.092v.062a4.913 4.913 0 003.946 4.812 4.902 4.902 0 01-2.212.084 4.918 4.918 0 004.6 3.417A9.867 9.867 0 012 19.54a13.94 13.94 0 007.548 2.212c9.057 0 14.01-7.514 14.01-14.01 0-.213-.005-.426-.014-.637A10.025 10.025 0 0024 4.56a9.6 9.6 0 01-2.357.646z"/>
+                        </svg>
+                    </a>
+                    <a href="https://linkedin.com" target="_blank" aria-label="LinkedIn">
+                        <svg width="30" height="30" fill="white" viewBox="0 0 24 24">
+                            <path d="M19 0h-14c-2.76 0-5 2.24-5 5v14c0 2.76 2.24 5 5 5h14c2.76 0 5-2.24 5-5v-14c0-2.76-2.24-5-5-5zm-11.5 19h-3v-9h3v9zm-1.5-10.3c-.97 0-1.75-.79-1.75-1.75s.78-1.75 1.75-1.75 1.75.79 1.75 1.75-.78 1.75-1.75 1.75zm13 10.3h-3v-4.5c0-1.1-.9-2-2-2s-2 .9-2 2v4.5h-3v-9h3v1.2c.58-.84 1.53-1.2 2.5-1.2 1.93 0 3.5 1.57 3.5 3.5v5.5z"/>
+                        </svg>
+                    </a>
+                    <a href="https://aigrammar.com" target="_blank" aria-label="Website">
+                        <svg width="30" height="30" fill="white" viewBox="0 0 24 24">
+                            <path d="M12 0C5.373 0 0 5.373 0 12c0 4.859 2.925 9.072 7.093 10.932a.993.993 0 00.907-.042c.137-.074.275-.148.412-.222l.177-.096c.451-.246.918-.5 1.387-.755l.14-.077c.8-.436 1.598-.873 2.391-1.308.278-.152.562-.305.843-.458.277-.151.55-.308.823-.465.162-.091.324-.181.487-.272.497-.278.991-.56 1.483-.84.402-.229.802-.461 1.2-.696.157-.093.314-.188.47-.281.249-.149.495-.304.738-.46.45-.286.896-.579 1.336-.875.12-.081.241-.162.36-.243a.996.996 0 00.197-1.438c-1.928-2.284-3.855-4.57-5.782-6.856a1 1 0 00-.733-.353l-4.657-.042c-.557-.005-1.118-.01-1.679-.01H12c-.552 0-1 .448-1 1v4.999c0 .552.448 1 1 1h4.999c.552 0 1-.448 1-1v-.743c0-.276-.224-.5-.5-.5s-.5.224-.5.5v.743h-4v-3.999h3.999v.743c0 .276.224.5.5.5s.5-.224.5-.5v-.743c0-.552-.448-1-1-1h-4.999c-.552 0-1 .448-1 1V12c0 .552.448 1 1 1h4.999c.552 0 1-.448 1-1V8.999h1c.552 0 1-.448 1-1V4.999c0-.552-.448-1-1-1H12z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
         </div>
-        <div class="feature-card">
-          <h3>Multilingual Support</h3>
-          <p>Edit text in multiple languages with high accuracy.</p>
+        <div class="footer-bottom">
+            <p>© 2025 AI Grammar Editor. All rights reserved.</p>
         </div>
-        <div class="feature-card">
-          <h3>Smart AI</h3>
-          <p>Learns and personalizes suggestions based on your writing style.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Seamless Integration</h3>
-          <p>Works smoothly on browsers, mobile apps, and platforms like Word and Google Docs.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Top Security</h3>
-          <p>Your data is encrypted and fully protected, ensuring privacy.</p>
-        </div>
-      </section>
-
-      <!-- Testimonials Section -->
-      <section class="testimonials" id="testimonials">
-        <h2>What Our Users Say</h2>
-        <div class="testimonial-grid">
-          <div class="testimonial-card">
-            <div class="stars">★★★★★</div>
-            <p>"AI Grammar Editor has significantly improved my writing quality. The suggestions are smart and easy to apply!"</p>
-            <h4>John Doe - Writer</h4>
-          </div>
-          <div class="testimonial-card">
-            <div class="stars">★★★★☆</div>
-            <p>"I use this tool for academic papers, and it saves so much time. The support for multiple languages is great!"</p>
-            <h4>Jane Smith - Student</h4>
-          </div>
-          <div class="testimonial-card">
-            <div class="stars">★★★★★</div>
-            <p>"User-friendly interface and highly accurate edits. I'm very satisfied!"</p>
-            <h4>Mike Johnson - Marketing Specialist</h4>
-          </div>
-        </div>
-      </section>
-
-      <!-- FAQ Section -->
-      <section class="faq" id="faq">
-        <h2>Frequently Asked Questions</h2>
-        <div class="faq-item">
-          <h3>Does AI Grammar Editor support multiple languages?</h3>
-          <p>Yes, we support over 20 languages with high accuracy.</p>
-        </div>
-        <div class="faq-item">
-          <h3>Can I use it for free?</h3>
-          <p>You can use the free version with basic features. Paid plans offer advanced functionalities.</p>
-        </div>
-        <div class="faq-item">
-          <h3>Is my data secure?</h3>
-          <p>We use high-level encryption to protect your data. Privacy is our top priority.</p>
-        </div>
-        <div class="faq-item">
-          <h3>Can the tool integrate with other software?</h3>
-          <p>Yes, AI Grammar Editor seamlessly integrates with Microsoft Word, Google Docs, and more.</p>
-        </div>
-      </section>
-
-      <!-- Upload Form -->
-      <div id="uploadFormContainer" class="upload-form-overlay hidden">
-        <div class="upload-form-box">
-          <h3>Upload a Document</h3>
-          <div class="form-group">
-            <label for="documentFile" class="custom-file-label">📎 Choose File</label>
-            <input
-              type="file"
-              id="documentFile"
-              accept=".txt,.doc,.docx,.pdf"
-              class="hidden"
-              aria-label="Select document to upload"
-            />
-            <span id="file-name-display">No file chosen</span>
-          </div>
-          <div class="form-actions flex space-x-4">
-            <button onclick="uploadDocument()" aria-label="Upload document">
-              Upload
-            </button>
-            <button onclick="closeUploadForm()" aria-label="Cancel upload">
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Settings Panel -->
-<aside id="settingsPanel" class="settings-panel" role="dialog">
-  <!-- Close Button -->
-  <button class="close-settings" onclick="closeSettingsPanel()" aria-label="Close settings">✖</button>
-
-  <!-- Avatar Section -->
-  <h3 class="account-header">Account Settings</h3>
-  <div class="avatar-upload" onclick="triggerAvatarInput()">
-    <img id="previewAvatar" src="https://via.placeholder.com/120/ffffff/000000?text=Person" alt="User Avatar" />
-    <input type="file" id="avatarInput" accept="image/*" onchange="previewAvatar(event)" class="hidden" />
-    <p class="avatar-note">Click to change avatar</p>
-  </div>
-
-  <!-- User Information (read-only) -->
-  <div class="user-info-settings">
-    <div class="form-group">
-      <label for="settingUsername">Username</label>
-      <input type="text" id="settingUsername" value="..." readonly aria-label="Username" />
-    </div>
-    <div class="form-group">
-      <label for="settingEmail">Email</label>
-      <input type="email" id="settingEmail" value="..." readonly aria-label="Email" />
-    </div>
-    <div class="form-group">
-      <label for="settingPhone">Phone</label>
-      <input type="tel" id="settingPhone" value="..." readonly aria-label="Phone" />
-    </div>
-  </div>
-
-  <!-- Language Selection -->
-  <div class="form-group">
-    <label for="languageSelect">Language</label>
-    <select id="languageSelect" aria-label="Language select">
-      <option value="en">English</option>
-      <option value="vi">Tiếng Việt</option>
-      <option value="fr">Français</option>
-      <option value="de">Deutsch</option>
-      <!-- Add more languages as needed -->
-    </select>
-  </div>
-
-  <!-- Theme Toggle -->
-  <div class="form-group">
-    <label for="themeToggle">Theme</label>
-    <select id="themeToggle" onchange="toggleTheme()" aria-label="Theme">
-      <option value="light">Light Mode</option>
-      <option value="dark">Dark Mode</option>
-    </select>
-  </div>
-
-  <!-- Save and Logout -->
-  <button class="save-btn" onclick="saveSettings()" aria-label="Save settings">Save Changes</button>
-  <button class="logout-btn" id="logout-btn" aria-label="Logout">Logout</button>
-</aside>
-
-<!-- Logout Confirmation Modal -->
-<div id="logoutConfirmModal" class="hidden">  
-  <div class="modal-box">
-    <div class="modal-title">Are you sure you want to log out?</div>
-    <div class="modal-actions">
-      <button onclick="confirmLogout()" class="confirm-logout">Yes</button>
-      <button onclick="closeLogoutModal()" class="cancel-logout">No</button>
-    </div>
-  </div>
-</div>
-
-
-
-
-
-
-<!-- Footer Section -->
-<footer class="footer" id="contact">
-  <div class="footer-container">
-    <!-- Contact Info -->
-    <div class="footer-left">
-      <h3>Contact Us</h3>
-      <p>Email: support@aigrammar.com</p>
-      <p>Phone: +84 123 456 789</p>
-      <p>Address: 123 AI Street, Hanoi, Vietnam</p>
-    </div>
-
-    <!-- Social Media -->
-    <div class="footer-right">
-      <h3>Follow Us</h3>
-      <div class="social-icons">
-        <a href="https://facebook.com" target="_blank" aria-label="Facebook">
-          <img src="../assets/images/facebook-icon.png" alt="Facebook">
-        </a>
-        <a href="https://twitter.com" target="_blank" aria-label="Twitter">
-          <img src="../assets/images/twitter-icon.png" alt="Twitter">
-        </a>
-        <a href="https://linkedin.com" target="_blank" aria-label="LinkedIn">
-          <img src="../assets/images/linkedin-icon.png" alt="LinkedIn">
-        </a>
-        <a href="https://aigrammar.com" target="_blank" aria-label="Website">
-          <img src="../assets/images/web-icon.png" alt="Website">
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <div class="footer-bottom">
-    <p>© 2025 AI Grammar Editor. All rights reserved.</p>
-  </div>
-</footer>
-  
-
-
-
-
-  </div>
+    </footer>
 </body>
 </html>

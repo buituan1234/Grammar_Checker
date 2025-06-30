@@ -61,32 +61,40 @@ function handleLogin(event) {
   const password = document.getElementById('loginPassword').value.trim();
   const loginError = document.getElementById('loginError');
 
-  const adminData = JSON.parse(localStorage.getItem('adminData'));
+  // Lấy adminData, nếu không có thì tạo mặc định
+  let adminData = JSON.parse(localStorage.getItem('adminData'));
+  if (!adminData) {
+    adminData = { username: 'admin', password: 'admin123' };
+    localStorage.setItem('adminData', JSON.stringify(adminData));
+  }
+
   const users = JSON.parse(localStorage.getItem('users')) || [];
 
-  // Admin login
-  if (adminData && username === adminData.username && password === adminData.password) {
+  // Đăng nhập Admin
+  if (username === adminData.username && password === adminData.password) {
+    localStorage.setItem('loggedInUser', JSON.stringify({ username, role: 'admin' }));
     showToast("✅ Admin login successful!");
     setTimeout(() => {
       window.location.href = 'admin.html';
-    }, 2000);
+    }, 1500);
     return;
   }
 
-  // User login
+  // Đăng nhập User
   const matchedUser = users.find(user => user.username === username && user.password === password);
   if (matchedUser) {
-    localStorage.setItem('userData', JSON.stringify(matchedUser));
+    localStorage.setItem('loggedInUser', JSON.stringify({ username, role: 'user' }));
     showToast("✅ User login successful!");
     setTimeout(() => {
       window.location.href = 'Grammar-Checker.html';
-    }, 2000);
+    }, 1500);
     return;
   }
 
-  // Error
+  // Sai thông tin
   loginError.textContent = 'Invalid username or password.';
 }
+
 
 
 // Handle register
