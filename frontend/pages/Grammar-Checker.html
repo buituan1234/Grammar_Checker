@@ -12,7 +12,7 @@
     <header>
         <nav>
             <div class="logo">AI Grammar Editor</div>
-            <ul>
+            <ul class="nav-links">
                 <li><a href="#grammar" id="grammar-link" aria-label="Go to Grammar Checker">Grammar</a></li>
                 <li><a href="#about" id="about-link" aria-label="Go to About">About</a></li>
                 <li><a href="#features" id="features-link" aria-label="Go to Features">Features</a></li>
@@ -26,170 +26,76 @@
 
     <main>
         <section class="editor-container" id="grammar">
-            <div class="editor-row">
-                <div class="input-text speakable-box">
-                    <div class="top-bar">
-                        <div class="custom-language-dropdown">
-                            <input
-                                type="text"
-                                placeholder="Select Language..."
-                                id="translateInput"
-                                onclick="toggleLangDropdown2()"
-                                readonly
-                                aria-label="Select input language"
-                            />
-                            <div class="lang-dropdown" id="translateDropdown">
-                                <div class="dropdown-header">
-                                    <input
-                                        type="text"
-                                        id="translateSearch"
-                                        placeholder="Search language..."
-                                        oninput="filterTranslateLanguages()"
-                                        aria-label="Search languages"
-                                    />
-                                    <button class="close-btn" onclick="closeLangDropdown2()" aria-label="Close language dropdown">
-                                        ✖
-                                    </button>
-                                </div>
-                                <ul id="translateList">
-                                    <li data-lang="English">English</li>
-                                    <li data-lang="Spanish">Spanish</li>
-                                    <li data-lang="French">French</li>
-                                    <li data-lang="Vietnamese">Vietnamese</li>
-                                    <li data-lang="Chinese">Chinese</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <button class="doc-btn" onclick="showUploadBox()" aria-label="Upload Document">
-                            📄
-                        </button>
+            <div class="editor-wrapper">
+                <div class="editor-left">
+                    <div class="toolbar">
+                        <select class="language-select" id="languageSelect">
+                            <option value="en">English</option>
+                            <option value="vi">Vietnamese</option>
+                            <option value="es">Spanish</option>
+                        </select>
+                        <button id="uploadButton" onclick="uploadDocument()">Upload Document</button>
                     </div>
-                    <textarea
-                        placeholder="Type or paste your text here..."
-                        id="inputTextarea"
-                        rows="6"
-                        aria-label="Input text area"
-                    ></textarea>
-                    <button class="sound-btn-bottom" onclick="playInputAudio()" aria-label="Play input audio">
-                        🔊
-                    </button>
+                    <textarea id="inputText" placeholder="Enter your text here..."></textarea>
+                    <button id="checkButton" onclick="checkGrammar()">Check</button>
                 </div>
-
-                <div class="result-box speakable-box">
-                    <div class="result-header">
-                        <h2 class="result-title green">Grammar</h2>
+                <div class="editor-right">
+                    <div class="toolbar">
+                        <button id="speakerButton" onclick="speakResult()">🔊</button>
+                        <button id="copyButton" onclick="copyToClipboard()">Copy</button>
                     </div>
-                    <div class="result-body">
-                        <div class="result-content">
-                            <div class="result-part">
-                                <p><strong>Result:</strong> <span id="grammarResult">Nice job!</span></p>
-                            </div>
-                            <div class="result-part">
-                                <p><strong>Recommendations:</strong></p>
-                                <ul id="grammarRecommendations">
-                                    <li>No issues detected.</li>
-                                </ul>
-                                <button class="apply-btn" onclick="applySuggestion()" aria-label="Apply grammar suggestion">
-                                    ✔ Apply
-                                </button>
-                            </div>
+                    <div class="result-section">
+                        <h3>Result</h3>
+                        <p id="resultText">Result: </p>
+                    </div>
+                    <div class="suggestion-section">
+                        <h3>Suggestions</h3>
+                        <div id="recommendations">
+                            <ul id="recommendationList"></ul>
                         </div>
-                    </div>
-                    <button class="sound-btn-bottom" onclick="playGrammarAudio()" aria-label="Play grammar audio">
-                        🔊
-                    </button>
-                </div>
-            </div>
-
-            <div class="editor-row">
-                <div class="translation-box speakable-box">
-                    <div class="result-header">
-                        <h2 class="result-title">Translation</h2>
-                        <div class="custom-language-dropdown">
-                            <input
-                                type="text"
-                                placeholder="Select Language..."
-                                id="translateInputBottom"
-                                onclick="toggleLangDropdownBottom()"
-                                readonly
-                                aria-label="Select translation language"
-                            />
-                            <div class="lang-dropdown" id="translateDropdownBottom">
-                                <div class="dropdown-header">
-                                    <input
-                                        type="text"
-                                        id="translateSearchBottom"
-                                        placeholder="Search..."
-                                        oninput="filterTranslateLanguagesBottom()"
-                                        aria-label="Search translation languages"
-                                    />
-                                    <button class="close-btn" onclick="closeLangDropdownBottom()" aria-label="Close translation dropdown">
-                                        ✖
-                                    </button>
-                                </div>
-                                <ul id="translateListBottom">
-                                    <li data-lang="English">English</li>
-                                    <li data-lang="Spanish">Spanish</li>
-                                    <li data-lang="French">French</li>
-                                    <li data-lang="Vietnamese">Vietnamese</li>
-                                    <li data-lang="Chinese">Chinese</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="result-content" id="translationContent">
-                        <p>Your translated text will appear here.</p>
-                    </div>
-                    <button class="sound-btn-bottom" onclick="playTranslationAudio()" aria-label="Play translation audio">
-                        🔊
-                    </button>
-                </div>
-
-                <div class="history-box">
-                    <div class="result-header">
-                        <h2 class="result-title">Grammar History</h2>
-                    </div>
-                    <div class="result-content" id="historyContent">
-                        <p>No history yet.</p>
+                        <button id="applyButton" onclick="applySuggestion()">Apply</button>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="about" id="about">
+        <section class="content-section about" id="about">
             <h2>About AI Grammar Editor</h2>
             <p>AI Grammar Editor is the ultimate solution for fast and accurate text editing. Powered by advanced AI, we not only check grammar but also suggest style improvements, ensuring your writing is always professional and clear.</p>
             <p>Whether you're a student, writer, or professional, AI Grammar Editor helps you create high-quality content, supports over 20 languages, and integrates with multiple platforms.</p>
         </section>
 
-        <section class="features" id="features">
-            <div class="feature-card">
-                <h3>Grammar Check</h3>
-                <p>Detect and correct grammar and spelling errors with precision and speed.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Style Suggestions</h3>
-                <p>Enhance your writing style for clearer, more professional content.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Multilingual Support</h3>
-                <p>Edit text in multiple languages with high accuracy.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Smart AI</h3>
-                <p>Learns and personalizes suggestions based on your writing style.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Seamless Integration</h3>
-                <p>Works smoothly on browsers, mobile apps, and platforms like Word and Google Docs.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Top Security</h3>
-                <p>Your data is encrypted and fully protected, ensuring privacy.</p>
+        <section class="content-section features" id="features">
+            <h2>Features</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>Grammar Check</h3>
+                    <p>Detect and correct grammar and spelling errors with precision and speed.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Style Suggestions</h3>
+                    <p>Enhance your writing style for clearer, more professional content.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Multilingual Support</h3>
+                    <p>Edit text in multiple languages with high accuracy.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Smart AI</h3>
+                    <p>Learns and personalizes suggestions based on your writing style.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Seamless Integration</h3>
+                    <p>Works smoothly on browsers, mobile apps, and platforms like Word and Google Docs.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Top Security</h3>
+                    <p>Your data is encrypted and fully protected, ensuring privacy.</p>
+                </div>
             </div>
         </section>
 
-        <section class="testimonials" id="testimonials">
+        <section class="content-section testimonials" id="testimonials">
             <h2>What Our Users Say</h2>
             <div class="testimonial-grid">
                 <div class="testimonial-card">
@@ -210,7 +116,7 @@
             </div>
         </section>
 
-        <section class="faq" id="faq">
+        <section class="content-section faq" id="faq">
             <h2>Frequently Asked Questions</h2>
             <div class="faq-item">
                 <h3>Does AI Grammar Editor support multiple languages?</h3>
@@ -230,27 +136,17 @@
             </div>
         </section>
 
-        <div id="uploadFormContainer" class="upload-form-overlay hidden">
+        <div id="uploadFormContainer" class="modal-overlay">
             <div class="upload-form-box">
                 <h3>Upload a Document</h3>
                 <div class="form-group">
                     <label for="documentFile" class="custom-file-label">📎 Choose File</label>
-                    <input
-                        type="file"
-                        id="documentFile"
-                        accept=".txt,.doc,.docx,.pdf"
-                        class="hidden"
-                        aria-label="Select document to upload"
-                    />
+                    <input type="file" id="documentFile" accept=".txt,.doc,.docx,.pdf" class="hidden" aria-label="Select document to upload" />
                     <span id="file-name-display">No file chosen</span>
                 </div>
                 <div class="form-actions">
-                    <button onclick="uploadDocument()" aria-label="Upload document">
-                        Upload
-                    </button>
-                    <button onclick="closeUploadForm()" aria-label="Cancel upload">
-                        Cancel
-                    </button>
+                    <button onclick="uploadDocument()" aria-label="Upload document">Upload</button>
+                    <button onclick="closeUploadForm()" aria-label="Cancel upload">Cancel</button>
                 </div>
             </div>
         </div>
@@ -277,32 +173,40 @@
                     <input type="tel" id="settingPhone" readonly aria-label="Phone" />
                 </div>
             </div>
-            <div class="form-group">
-                <label for="languageSelect">Language</label>
-                <select id="languageSelect" aria-label="Language select">
-                    <option value="en">English</option>
-                    <option value="vi">Tiếng Việt</option>
-                    <option value="fr">Français</option>
-                    <option value="de">Deutsch</option>
-                </select>
+            <div class="form-group history-section">
+                <label for="historyToggle">Save Grammar History</label>
+                <input type="checkbox" id="historyToggle" aria-label="Toggle grammar history saving" />
             </div>
-            <div class="form-group">
-                <label for="themeToggle">Theme</label>
-                <select id="themeToggle" onchange="toggleTheme()" aria-label="Theme">
-                    <option value="light">Light Mode</option>
-                    <option value="dark">Dark Mode</option>
-                </select>
+            <button id="viewHistoryBtn" onclick="showHistoryModal()" aria-label="View history">View History</button>
+            <div class="settings-buttons">
+                <button class="save-btn" onclick="saveSettings()" aria-label="Save settings">Save Changes</button>
+                <button class="logout-btn" onclick="showLogoutModal()" aria-label="Logout">Logout</button>
             </div>
-            <button class="save-btn" onclick="saveSettings()" aria-label="Save settings">Save Changes</button>
-            <button class="logout-btn" onclick="showLogoutModal()" aria-label="Logout">Logout</button>
         </aside>
 
-        <div id="logoutConfirmModal" class="hidden">
+        <div id="logoutConfirmModal" class="modal-overlay">
             <div class="modal-box">
                 <div class="modal-title">Are you sure you want to log out?</div>
                 <div class="modal-actions">
                     <button onclick="confirmLogout()" class="confirm-logout">Yes, Log Out</button>
                     <button onclick="closeLogoutModal()" class="cancel-logout">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="historyModal" class="modal-overlay">
+            <div class="modal-box">
+                <h3>Grammar History</h3>
+                <div class="history-content">
+                    <ul id="modalHistoryList"></ul>
+                </div>
+                <div class="modal-actions">
+                    <button onclick="clearHistory()" aria-label="Clear history">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+                        </svg> Clear
+                    </button>
+                    <button onclick="closeHistoryModal()" class="cancel-logout" aria-label="Close modal">X</button>
                 </div>
             </div>
         </div>

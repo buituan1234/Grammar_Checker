@@ -1,39 +1,35 @@
+// index.js
+
 // Handle modal open/close
 function openModal(modalId) {
-    document.getElementById(modalId).style.display = 'flex';
+    const modal = document.getElementById(modalId);
+    modal.style.display = 'flex';
+    const modalContent = modal.querySelector('.modal-content');
+    modalContent.classList.remove('slide-left', 'slide-right');
+
+    if (modalId === 'registerModal') {
+        modalContent.classList.add('slide-left');
+    } else if (modalId === 'loginModal') {
+        modalContent.classList.add('slide-right');
+    }
 }
 
 function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
     if (modalId === 'loginModal') {
-        document.getElementById('loginForm').reset();
+        document.getElementById('loginForm')?.reset();
         document.getElementById('loginError').textContent = '';
     } else if (modalId === 'registerModal') {
-        document.getElementById('registerForm').reset();
+        document.getElementById('registerForm')?.reset();
         document.getElementById('passwordError').textContent = '';
         document.getElementById('phoneError').textContent = '';
     }
 }
 
 function switchModal(closeId, openId) {
-    const closeModalEl = document.getElementById(closeId);
-    const openModalEl = document.getElementById(openId);
-
-    closeModal(closeId); // đóng modal cũ
-
-    // Xóa class animation cũ nếu có
-    openModalEl.querySelector('.modal-content').classList.remove('slide-left', 'slide-right');
-
-    // Thêm class animation mới
-    if (openId === 'registerModal') {
-        openModalEl.querySelector('.modal-content').classList.add('slide-left');
-    } else if (openId === 'loginModal') {
-        openModalEl.querySelector('.modal-content').classList.add('slide-right');
-    }
-
-    openModal(openId); // mở modal mới
+    closeModal(closeId);
+    openModal(openId);
 }
-
 
 function togglePassword(element) {
     const passwordInput = element.previousElementSibling;
@@ -47,57 +43,49 @@ function togglePassword(element) {
     }
 }
 
-// Close modal when clicking outside
 window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
         closeModal(event.target.id);
     }
-}
+};
 
 function handleLogin(event) {
-  event.preventDefault();
+    event.preventDefault();
 
-  const username = document.getElementById('loginUsername').value.trim();
-  const password = document.getElementById('loginPassword').value.trim();
-  const loginError = document.getElementById('loginError');
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    const loginError = document.getElementById('loginError');
 
-  // Lấy adminData, nếu không có thì tạo mặc định
-  let adminData = JSON.parse(localStorage.getItem('adminData'));
-  if (!adminData) {
-    adminData = { username: 'admin', password: 'admin123' };
-    localStorage.setItem('adminData', JSON.stringify(adminData));
-  }
+    let adminData = JSON.parse(localStorage.getItem('adminData'));
+    if (!adminData) {
+        adminData = { username: 'admin', password: 'admin123' };
+        localStorage.setItem('adminData', JSON.stringify(adminData));
+    }
 
-  const users = JSON.parse(localStorage.getItem('users')) || [];
+    const users = JSON.parse(localStorage.getItem('users')) || [];
 
-  // Đăng nhập Admin
-  if (username === adminData.username && password === adminData.password) {
-    localStorage.setItem('loggedInUser', JSON.stringify({ username, role: 'admin' }));
-    showToast("✅ Admin login successful!");
-    setTimeout(() => {
-      window.location.href = 'admin.html';
-    }, 1500);
-    return;
-  }
+    if (username === adminData.username && password === adminData.password) {
+        localStorage.setItem('loggedInUser', JSON.stringify({ username, role: 'admin' }));
+        showToast("✅ Admin login successful!");
+        setTimeout(() => {
+            window.location.href = 'admin.html';
+        }, 1500);
+        return;
+    }
 
-  // Đăng nhập User
-  const matchedUser = users.find(user => user.username === username && user.password === password);
-  if (matchedUser) {
-    localStorage.setItem('loggedInUser', JSON.stringify({ username, role: 'user' }));
-    showToast("✅ User login successful!");
-    setTimeout(() => {
-      window.location.href = 'Grammar-Checker.html';
-    }, 1500);
-    return;
-  }
+    const matchedUser = users.find(user => user.username === username && user.password === password);
+    if (matchedUser) {
+        localStorage.setItem('loggedInUser', JSON.stringify({ username, role: 'user' }));
+        showToast("✅ User login successful!");
+        setTimeout(() => {
+            window.location.href = 'Grammar-Checker.html';
+        }, 1500);
+        return;
+    }
 
-  // Sai thông tin
-  loginError.textContent = 'Invalid username or password.';
+    loginError.textContent = 'Username or password is incorrect.';
 }
 
-
-
-// Handle register
 function handleRegister(event) {
     event.preventDefault();
 
@@ -118,11 +106,11 @@ function handleRegister(event) {
     }
     if (!phoneRegex.test(phone)) {
         passwordError.textContent = '';
-        phoneError.textContent = 'Phone number must be 10 digits';
+        phoneError.textContent = 'The phone number must have 10 digits.';
         return;
     }
     if (password.length < 6) {
-        passwordError.textContent = 'Password must be at least 6 characters';
+        passwordError.textContent = 'The password must be at least 6 characters long.';
         phoneError.textContent = '';
         return;
     }
@@ -142,6 +130,18 @@ function handleRegister(event) {
 
     passwordError.textContent = '';
     phoneError.textContent = '';
+    showToast('✅ You have successfully registered, would you like to switch to login??');
+
+    const notificationModal = document.getElementById('notificationModal');
+    const notificationContent = notificationModal.querySelector('.notification-content');
+    notificationContent.innerHTML = `
+        <span class="close" onclick="closeModal('notificationModal')">×</span>
+        <p>You have successfully registered, would you like to switch to login?</p>
+        <div class="notification-buttons">
+            <button onclick="goToLogin()">Yes</button>
+            <button onclick="closeModal('notificationModal')">No</button>
+        </div>
+    `;
     openModal('notificationModal');
 }
 
@@ -150,15 +150,18 @@ function goToLogin() {
     switchModal('registerModal', 'loginModal');
 }
 
-// Animation on page load
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('animate') === 'left') {
         document.body.classList.add('slide-in-left');
     }
+
+    document.querySelector('.cta-button')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        window.location.href = 'try-for-free.html';
+    });
 });
 
-// Smooth link navigation
 document.querySelectorAll('a').forEach(link => {
     link.addEventListener('click', e => {
         const href = link.getAttribute('href');
@@ -169,22 +172,128 @@ document.querySelectorAll('a').forEach(link => {
     });
 });
 
-//thông báo đăng nhập thành công 
-function showLoginSuccessToast() {
-  const toast = document.getElementById("loginSuccessToast");
-  toast.classList.add("show");
-
-  setTimeout(() => {
-    toast.classList.remove("show");
-  }, 2000); // Tự động ẩn sau 2 giây
-}
-
 function showToast(message) {
-  const toast = document.getElementById("loginSuccessToast");
-  toast.textContent = message;
-  toast.classList.add("show");
+    const toast = document.getElementById('loginSuccessToast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+} 
 
-  setTimeout(() => {
-    toast.classList.remove("show");
-  }, 3000);
+function uploadDocument() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,.docx,.pdf';
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('inputText').value = event.target.result;
+                showToast('✅ The document has been uploaded!');
+            };
+            reader.readAsText(file);
+        }
+    };
+    input.click();
 }
+
+async function checkGrammar() {
+    const inputText = document.getElementById('inputText').value;
+    const resultText = document.getElementById('resultText');
+    const recommendationList = document.getElementById('recommendationList');
+    const language = document.getElementById('languageSelect')?.value || 'en-US';
+
+    if (!inputText.trim()) {
+        resultText.textContent = 'Result: Please enter or upload text for verification.';
+        recommendationList.innerHTML = '';
+        return;
+    }
+
+    try {
+        const response = await fetch('http://localhost:3000/api/grammar/check', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ text: inputText, language })
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            resultText.textContent = `❌ Error: ${result.error}`;
+            recommendationList.innerHTML = '';
+            return;
+        }
+
+        const matches = result.data.matches;
+        resultText.textContent = `Result: ${matches.length} issue(s) found.`;
+
+        recommendationList.innerHTML = matches.map(match => `
+            <li>
+                <strong>${match.message}</strong><br>
+                <span>Suggestion: ${match.replacements.map(r => r.value).join(', ') || 'None'}</span><br>
+                <span style="font-size: 12px; color: gray">Category: ${match.category}, Severity: ${match.severity}</span>
+            </li>
+        `).join('');
+
+        showToast('✅ Grammar check completed!');
+    } catch (error) {
+        console.error('Grammar check failed:', error);
+        resultText.textContent = '❌ Error: Unable to connect to grammar checking service.';
+    }
+}
+
+document.getElementById('inputText')?.addEventListener('input', checkGrammar);
+
+function speakResult() {
+    const resultText = document.getElementById('resultText').textContent.replace('Result: ', '');
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(resultText);
+        utterance.lang = document.getElementById('languageSelect').value;
+        window.speechSynthesis.speak(utterance);
+        showToast('🔊 Đang phát âm thanh!');
+    } else {
+        showToast('⚠️ The browser does not support sound playback.');
+    }
+}
+
+function copyToClipboard() {
+    const resultText = document.getElementById('resultText').textContent.replace('Result: ', '');
+    navigator.clipboard.writeText(resultText).then(() => {
+        showToast('✅ The text has been copied!');
+    });
+}
+
+function applySuggestion() {
+    const recommendationList = document.getElementById('recommendationList');
+    const selectedSuggestion = recommendationList.querySelector('li:hover') || recommendationList.querySelector('li');
+    if (selectedSuggestion) {
+        const suggestionText = selectedSuggestion.textContent;
+        const resultText = document.getElementById('resultText');
+        resultText.textContent = `Result: ${suggestionText.split('→')[1].trim()}`;
+        showToast('✅ The suggestion has been applied !');
+    } else {
+        showToast('⚠️ Please select a suggestion.');
+    }
+}
+
+async function loadLanguages() {
+    try {
+        const res = await fetch('http://localhost:3000/api/grammar/languages');
+        const data = await res.json();
+        const select = document.getElementById('languageSelect');
+        data.data.languages.forEach(lang => {
+            const opt = document.createElement('option');
+            opt.value = lang.code;
+            opt.textContent = `${lang.flag} ${lang.name}`;
+            select.appendChild(opt);
+        });
+    } catch (err) {
+        console.error('Failed to load languages', err);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadLanguages);
