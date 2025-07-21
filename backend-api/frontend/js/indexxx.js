@@ -373,31 +373,27 @@ function debounce(func, wait) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (window.location.pathname.includes('index.html') || window.location.pathname.includes('indexx.html')) {
-        window.grammarChecker = new GrammarChecker();
+    window.grammarChecker = new GrammarChecker();
+    const sampleTexts = [
+        "This is an example text with some grammar mistakes that need to be fixed.",
+        "I have went to the store yesterday and buyed some groceries.",
+        "She don't know how to swimming very good.",
+        "The weather is very nice today, isn't it?"
+    ];
 
-        const sampleTexts = [
-            "This is an example text with some grammar mistakes that need to be fixed.",
-            "I have went to the store yesterday and buyed some groceries.",
-            "She don't know how to swimming very good.",
-            "The weather is very nice today, isn't it?"
-        ];
+    const sampleBtn = document.createElement('button');
+    sampleBtn.textContent = 'Sample Text';
+    sampleBtn.className = 'check-btn';
+    sampleBtn.style.background = '#6b7280';
+    sampleBtn.style.marginLeft = '0.5rem';
+    sampleBtn.addEventListener('click', () => {
+        const randomText = sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
+        document.getElementById('textInput').value = randomText;
+        window.grammarChecker.updateStats();
+    });
 
-        const sampleBtn = document.createElement('button');
-        sampleBtn.textContent = 'Sample Text';
-        sampleBtn.className = 'check-btn';
-        sampleBtn.style.background = '#6b7280';
-        sampleBtn.style.marginLeft = '0.5rem';
-        sampleBtn.addEventListener('click', () => {
-            const randomText = sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
-            document.getElementById('textInput').value = randomText;
-            window.grammarChecker.updateStats();
-        });
-
-        document.querySelector('.controls').appendChild(sampleBtn);
-    }
+    document.querySelector('.controls').appendChild(sampleBtn);
 });
-
 document.querySelectorAll('.nav-menu a').forEach(anchor => {
     anchor.addEventListener('click', function(e) {
         if (this.textContent.trim().toLowerCase() === 'grammar') {

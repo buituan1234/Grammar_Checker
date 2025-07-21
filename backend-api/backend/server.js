@@ -81,7 +81,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Grammar Checker Server running on port ${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`🌍 Supported languages: English, German, Spanish, French, Italian`);
+  console.log(`🌍 Supported languages: English, German, Spanish, French, Netherlands`);
 });
 
 // Graceful shutdown

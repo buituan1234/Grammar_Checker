@@ -38,7 +38,7 @@ const checkGrammarValidation = [
     .withMessage('Text must be between 1 and 10,000 characters'),
   body('language')
     .optional()
-    .isIn(['en-US', 'en-GB', 'de-DE', 'es', 'fr', 'it'])
+    .isIn(['en-US', 'en-GB', 'de-DE', 'es', 'fr', 'nl'])
     .withMessage('Invalid language code')
 ];
 
@@ -132,7 +132,7 @@ router.get('/languages', (req, res) => {
         { code: 'de-DE', name: 'Deutsch', flag: '🇩🇪' },
         { code: 'es', name: 'Español', flag: '🇪🇸' },
         { code: 'fr', name: 'Français', flag: '🇫🇷' },
-        { code: 'it', name: 'Italiano', flag: '🇮🇹' }
+        { code: 'nl', name: 'Netherlands', flag: 'NL' }
       ]
     }
   });
