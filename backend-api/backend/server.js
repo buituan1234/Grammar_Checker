@@ -1,4 +1,3 @@
-
 // server.js - Main server file
 const express = require('express');
 const cors = require('cors');
@@ -18,9 +17,9 @@ app.use(compression());
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://yourdomain.com'] 
-    : ['http://localhost:3000', 'http://127.0.0.1:5500'],
+    : ['http://localhost:3000', 'http://127.0.0.1:5500', 'http://localhost:5500', 'http://127.0.0.1:5173'],
   methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-ID'],
   credentials: true
 };
 app.use(cors(corsOptions));
@@ -47,6 +46,7 @@ app.use(express.static('public'));
 
 // Routes
 app.use('/api/grammar', require('./routes/grammar'));
+app.use('/api/auth', require('./routes/auth'));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -81,6 +81,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Grammar Checker Server running on port ${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`🌍 Supported languages: English, German, Spanish, French, Italian`);
 });
 
 // Graceful shutdown
