@@ -1,4 +1,4 @@
-// introduction.js - Complete update with proper language support
+// introduction.js - Updated with free usage limit and single best suggestion
 
 // Free usage tracking
 let freeUsageCount = parseInt(localStorage.getItem('freeUsageCount') || '0');
@@ -17,6 +17,35 @@ function getSessionId() {
 // Check authentication status
 function isAuthenticated() {
   return localStorage.getItem('authToken') !== null;
+}
+
+// Update usage display
+function updateUsageDisplay() {
+  const usageInfo = document.getElementById('usage-info');
+  if (!usageInfo) {
+    // Create usage info display if not exists
+    const usageDiv = document.createElement('div');
+    usageDiv.id = 'usage-info';
+    usageDiv.className = 'usage-info';
+    usageDiv.innerHTML = `
+      <div class="usage-badge">
+        <span id="usage-text">Free checks: ${MAX_FREE_USAGE - freeUsageCount} remaining</span>
+      </div>
+    `;
+    document.body.appendChild(usageDiv);
+  }
+  
+  const usageText = document.getElementById('usage-text');
+  if (usageText) {
+    if (isAuthenticated()) {
+      usageText.textContent = 'Unlimited checks (Premium)';
+      usageText.parentElement.className = 'usage-badge premium';
+    } else {
+      const remaining = MAX_FREE_USAGE - freeUsageCount;
+      usageText.textContent = `Free checks: ${remaining} remaining`;
+      usageText.parentElement.className = remaining > 0 ? 'usage-badge' : 'usage-badge expired';
+    }
+  }
 }
 
 // Handle modal open/close
@@ -87,8 +116,14 @@ async function handleLogin(event) {
       localStorage.setItem('username', result.data.username);
       localStorage.setItem('email', result.data.email);
       
+      // Reset free usage count for authenticated users
+      localStorage.removeItem('freeUsageCount');
+      freeUsageCount = 0;
+      
       showToast("✅ Login successful!");
       closeModal('loginModal');
+      updateUsageDisplay();
+      updateNavigation();
       
       setTimeout(() => {
         window.location.href = 'indexxx.html';
@@ -194,7 +229,49 @@ function uploadDocument() {
   input.click();
 }
 
-// Check grammar with proper language support
+// Get best suggestion using AI logic
+function getBestSuggestion(match) {
+  const replacements = match.replacements;
+  if (!replacements || replacements.length === 0) return null;
+  
+  // Prioritize suggestions based on context and common patterns
+  const errorText = match.context?.text || '';
+  const ruleId = match.rule?.id || '';
+  
+  // Sort replacements by quality score
+  const scoredReplacements = replacements.map(replacement => {
+    let score = 0;
+    
+    // Higher score for shorter replacements (usually more natural)
+    score += Math.max(0, 10 - replacement.value.length);
+    
+    // Higher score for common words
+    const commonWords = ['the', 'a', 'an', 'is', 'are', 'was', 'were', 'have', 'has', 'do', 'does', 'did'];
+    if (commonWords.includes(replacement.value.toLowerCase())) {
+      score += 5;
+    }
+    
+    // Higher score for proper capitalization matching context
+    if (errorText.charAt(0) === errorText.charAt(0).toUpperCase()) {
+      if (replacement.value.charAt(0) === replacement.value.charAt(0).toUpperCase()) {
+        score += 3;
+      }
+    }
+    
+    // Rule-specific scoring
+    if (ruleId.includes('AGREEMENT')) {
+      // For agreement errors, prefer grammatically correct forms
+      score += 5;
+    }
+    
+    return { ...replacement, score };
+  });
+  
+  // Return the highest scored replacement
+  return scoredReplacements.sort((a, b) => b.score - a.score)[0];
+}
+
+// Check grammar with proper language support and usage limit
 async function checkGrammar() {
   const inputText = document.getElementById('inputText').value;
   const resultText = document.getElementById('resultText');
@@ -210,8 +287,7 @@ async function checkGrammar() {
   // Check authentication and free usage
   const isAuth = isAuthenticated();
   if (!isAuth && freeUsageCount >= MAX_FREE_USAGE) {
-    showToast('⚠️ Free usage limit reached. Please register or login.');
-    openModal('registerModal');
+    showUsageLimitModal();
     return;
   }
 
@@ -235,8 +311,7 @@ async function checkGrammar() {
 
     if (!result.success) {
       if (result.requiresAuth) {
-        showToast('⚠️ ' + result.error);
-        openModal('registerModal');
+        showUsageLimitModal();
         return;
       }
       resultText.textContent = `❌ Error: ${result.error}`;
@@ -248,11 +323,14 @@ async function checkGrammar() {
     if (!isAuth) {
       freeUsageCount++;
       localStorage.setItem('freeUsageCount', freeUsageCount.toString());
+      updateUsageDisplay();
       
       // Show remaining checks
-      const remaining = result.data.usage.remainingChecks;
+      const remaining = MAX_FREE_USAGE - freeUsageCount;
       if (remaining > 0) {
         showToast(`✅ Grammar check completed! ${remaining} free checks remaining.`);
+      } else {
+        showToast('✅ Grammar check completed! This was your last free check.');
       }
     } else {
       showToast('✅ Grammar check completed!');
@@ -261,17 +339,86 @@ async function checkGrammar() {
     const matches = result.data.matches;
     resultText.textContent = `Result: ${matches.length} issue(s) found.`;
 
-    recommendationList.innerHTML = matches.map(match => `
-      <li>
-        <strong>${match.message}</strong><br>
-        <span>Suggestion: ${match.replacements.map(r => r.value).join(', ') || 'None'}</span><br>
-        <span style="font-size: 12px; color: gray">Category: ${match.category}, Severity: ${match.severity}</span>
-      </li>
-    `).join('');
+    // Process matches with single best suggestion
+    recommendationList.innerHTML = matches.map(match => {
+      const bestSuggestion = getBestSuggestion(match);
+      const suggestionText = bestSuggestion ? bestSuggestion.value : 'No suggestion available';
+      
+      return `
+        <li class="suggestion-item">
+          <div class="error-details">
+            <strong>Error:</strong> "${match.context?.text?.substring(match.context.offset, match.context.offset + match.context.length) || 'Unknown'}"
+          </div>
+          <div class="error-message">
+            <strong>Issue:</strong> ${match.message}
+          </div>
+          <div class="best-suggestion">
+            <strong>Best Fix:</strong> <span class="suggestion-text">${suggestionText}</span>
+            ${bestSuggestion ? `<button class="apply-suggestion" onclick="applySuggestion('${match.context?.text}', '${bestSuggestion.value}')">Apply</button>` : ''}
+          </div>
+          <div class="error-meta">
+            <small>Category: ${match.rule?.category?.name || 'Grammar'} | Confidence: ${match.rule?.issueType || 'Medium'}</small>
+          </div>
+        </li>
+      `;
+    }).join('');
 
   } catch (error) {
     console.error('Grammar check failed:', error);
     resultText.textContent = '❌ Error: Unable to connect to grammar checking service.';
+  }
+}
+
+// Apply suggestion function
+function applySuggestion(originalText, suggestion) {
+  const inputText = document.getElementById('inputText');
+  const currentText = inputText.value;
+  
+  // Simple replacement - in a real app, you'd want more sophisticated matching
+  const updatedText = currentText.replace(originalText, suggestion);
+  inputText.value = updatedText;
+  
+  showToast('✅ Suggestion applied successfully!');
+  
+  // Optionally re-check grammar
+  setTimeout(() => {
+    checkGrammar();
+  }, 1000);
+}
+
+// Show usage limit modal
+function showUsageLimitModal() {
+  const modal = document.createElement('div');
+  modal.className = 'usage-warning-overlay';
+  modal.innerHTML = `
+    <div class="usage-warning-modal">
+      <div class="warning-content">
+        <h3>🚫 Free Usage Limit Reached</h3>
+        <p>You have used all <strong>3 free grammar checks</strong>.</p>
+        <p>To continue using our service, please:</p>
+        <div class="warning-actions">
+          <button class="btn-register" onclick="closeUsageModal(); openModal('registerModal')">
+            📝 Sign Up for Free
+          </button>
+          <button class="btn-login" onclick="closeUsageModal(); openModal('loginModal')">
+            🔑 Log In
+          </button>
+          <button class="btn-cancel" onclick="closeUsageModal()">
+            ❌ Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+}
+
+// Close usage modal
+function closeUsageModal() {
+  const modal = document.querySelector('.usage-warning-overlay');
+  if (modal) {
+    modal.remove();
   }
 }
 
@@ -296,20 +443,6 @@ function copyToClipboard() {
   });
 }
 
-// Apply suggestion
-function applySuggestion() {
-  const recommendationList = document.getElementById('recommendationList');
-  const selectedSuggestion = recommendationList.querySelector('li:hover') || recommendationList.querySelector('li');
-  if (selectedSuggestion) {
-    const suggestionText = selectedSuggestion.textContent;
-    const resultText = document.getElementById('resultText');
-    resultText.textContent = `Result: ${suggestionText.split('→')[1]?.trim() || 'Applied'}`;
-    showToast('✅ The suggestion has been applied!');
-  } else {
-    showToast('⚠️ Please select a suggestion.');
-  }
-}
-
 // Load languages from API
 async function loadLanguages() {
   try {
@@ -317,7 +450,7 @@ async function loadLanguages() {
     const data = await res.json();
     const select = document.getElementById('languageSelect');
     if (select) {
-      select.innerHTML = ''; // Clear existing options
+      select.innerHTML = '';
       data.data.languages.forEach(lang => {
         const opt = document.createElement('option');
         opt.value = lang.code;
@@ -345,8 +478,11 @@ async function loadUsageInfo() {
     const data = await res.json();
     
     if (data.success) {
-      freeUsageCount = data.data.used;
-      localStorage.setItem('freeUsageCount', freeUsageCount.toString());
+      if (!isAuthenticated()) {
+        freeUsageCount = data.data.used;
+        localStorage.setItem('freeUsageCount', freeUsageCount.toString());
+      }
+      updateUsageDisplay();
     }
   } catch (err) {
     console.error('Failed to load usage info', err);
@@ -372,8 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Check free usage limit
     if (freeUsageCount >= MAX_FREE_USAGE) {
-      showToast('⚠️ You have reached the free usage limit. Please register or login to continue.');
-      openModal('registerModal');
+      showUsageLimitModal();
       return;
     }
     
@@ -381,17 +516,16 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.href = 'indexxx.html';
   });
   
-  // Update navigation based on auth status
+  // Update navigation and usage display
   updateNavigation();
+  updateUsageDisplay();
   
-  // Load languages
+  // Load languages and usage info
   loadLanguages();
-  
-  // Load usage info
   loadUsageInfo();
   
   // Add input listener for real-time checking
-  document.getElementById('inputText')?.addEventListener('input', checkGrammar);
+  document.getElementById('inputText')?.addEventListener('input', debounce(checkGrammar, 2000));
 });
 
 // Update navigation based on authentication
@@ -402,7 +536,7 @@ function updateNavigation() {
   if (isAuth && authButtons) {
     const username = localStorage.getItem('username') || 'User';
     authButtons.innerHTML = `
-      <span style="margin-right: 15px;">Welcome, ${username}</span>
+      <span style="margin-right: 15px; color: #2c3e50;">Welcome, ${username}</span>
       <a href="#" class="logout" onclick="logout()">Logout</a>
     `;
   }
@@ -413,17 +547,40 @@ function logout() {
   localStorage.removeItem('authToken');
   localStorage.removeItem('username');
   localStorage.removeItem('email');
+  
+  // Reset usage tracking
+  freeUsageCount = 0;
+  localStorage.setItem('freeUsageCount', '0');
+  
   showToast('✅ Logged out successfully');
   updateNavigation();
+  updateUsageDisplay();
+  
   setTimeout(() => {
     window.location.href = 'introduction.html';
   }, 1000);
+}
+
+// Debounce function
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
 }
 
 // Handle window clicks for modal closing
 window.onclick = function(event) {
   if (event.target.classList.contains('modal')) {
     closeModal(event.target.id);
+  }
+  if (event.target.classList.contains('usage-warning-overlay')) {
+    closeUsageModal();
   }
 };
 
@@ -432,7 +589,7 @@ document.querySelectorAll('a').forEach(link => {
   link.addEventListener('click', e => {
     const href = link.getAttribute('href');
     if (!href || href.startsWith('#')) return;
-    if (link.onclick) return; // Skip if has onclick handler
+    if (link.onclick) return;
     e.preventDefault();
     document.body.style.opacity = 0;
     setTimeout(() => window.location.href = href, 300);
