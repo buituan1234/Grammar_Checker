@@ -84,8 +84,10 @@
 
 ●CSP (Content Security Policy) được cấu hình cho admin route.
 
-15. Real-time Grammar Checking
+8. Real-time Grammar Checking
+   
 ●Kiểm tra ngữ pháp trong thời gian thực.
+
 ●Gợi ý sửa lỗi và cho phép áp dụng từng lỗi hoặc tất cả.
 
 
