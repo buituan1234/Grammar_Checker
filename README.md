@@ -1,5 +1,6 @@
 🛠 Công nghệ sử dụng
 1. Frontend:
+
 ●HTML5, CSS3, JavaScript (ES6+)
 
 ●Bootstrap 5, FontAwesome
@@ -7,6 +8,7 @@
 ●Modular JavaScript (import/export)
 
 2. Backend:
+   
 ●Node.js, Express.js
 
 ●MSSQL (SQL Server)
@@ -18,11 +20,13 @@
 ●Helmet, CORS, Compression, Rate Limiting
 
 3. Công cụ bắt buộc
+   
 ●Node.js (phiên bản 16 hoặc cao hơn)
 
 ●SQL Server (hoặc SQL Server Express)
 
 🎯 Tính năng chính của dự án
+
 1. Kiểm tra ngữ pháp đa ngôn ngữ
    
 ●Hỗ trợ nhiều ngôn ngữ: English, Japanese, French, German, Russian, Spanish, Portuguese, Galician,...
