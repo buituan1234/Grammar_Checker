@@ -1,0 +1,6 @@
+# Thư mục không cần push
+node_modules/
+# File môi trường (chứa secret, API key)
+.env
+source_dump.txt
+.vscode/
