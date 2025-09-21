@@ -1,0 +1,218 @@
+.password-wrapper {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    right: var(--spacing-sm);
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-size: var(--font-sizes-sm);
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-normal);
+    z-index: 2;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-password:hover {
+    color: var(--primary-color);
+    background: var(--primary-ultra-light);
+}
+
+/* Checkbox Styling */
+.checkbox-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: var(--font-sizes-xs);
+    color: var(--text-secondary);
+}
+
+.checkbox-input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.checkbox-custom {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    margin-right: var(--spacing-sm);
+    position: relative;
+    transition: all var(--transition-normal);
+}
+
+.checkbox-input:checked + .checkbox-custom {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.checkbox-input:checked + .checkbox-custom::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.checkbox-text {
+    user-select: none;
+}
+
+/* Form Options */
+.form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.forgot-password-link {
+    color: var(--primary-color);
+    font-size: var(--font-sizes-xs);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all var(--transition-normal);
+}
+
+.forgot-password-link:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+/* Error and Success Messages */
+.error-message, .success-message {
+    font-size: var(--font-sizes-xs);
+    margin-top: var(--spacing-xs);
+    margin-bottom: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    opacity: 0;
+    transform: translateY(-5px);
+    transition: all var(--transition-normal);
+}
+
+.error-message:not(:empty), .success-message:not(:empty) {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.error-message {
+    color: var(--error-color);
+    background: var(--error-light);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.success-message {
+    color: var(--success-color);
+    background: var(--success-light);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* Form Footer */
+.form-footer {
+    text-align: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.switch-form-text {
+    color: var(--text-secondary);
+    font-size: var(--font-sizes-xs);
+}
+
+.switch-form-link {
+    color: var(--primary-color);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all var(--transition-normal);
+}
+
+.switch-form-link:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+/* Social Login */
+.social-login {
+    margin-top: var(--spacing-md);
+    padding-bottom: var(--spacing-md);
+}
+
+.divider {
+    position: relative;
+    text-align: center;
+    margin: var(--spacing-md) 0;
+}
+
+.divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--gray-200);
+}
+
+.divider-text {
+    background: var(--white);
+    color: var(--text-light);
+    font-size: var(--font-sizes-xs);
+    padding: 0 var(--spacing-sm);
+    position: relative;
+}
+
+.social-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.social-btn {
+    flex: 1;
+    padding: var(--spacing-sm);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    background: var(--white);
+    color: var(--text-secondary);
+    font-size: var(--font-sizes-xs);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    transition: all var(--transition-normal);
+    cursor: pointer;
+    height: 36px;
+}
+
+.social-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.social-btn-google:hover {
+    border-color: #ea4335;
+    color: #ea4335;
+}
+
+.social-btn-facebook:hover {
+    border-color: #1877f2;
+    color: #1877f2;
+}

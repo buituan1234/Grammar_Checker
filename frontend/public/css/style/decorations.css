@@ -1,0 +1,80 @@
+.brand-decoration {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.floating-element {
+    position: absolute;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.floating-element-1 {
+    width: 80px;
+    height: 80px;
+    top: 15%;
+    right: 15%;
+    animation: float1 6s ease-in-out infinite;
+}
+
+.floating-element-2 {
+    width: 50px;
+    height: 50px;
+    bottom: 25%;
+    left: 20%;
+    animation: float2 8s ease-in-out infinite;
+}
+
+.floating-element-3 {
+    width: 35px;
+    height: 35px;
+    top: 65%;
+    right: 25%;
+    animation: float3 10s ease-in-out infinite;
+}
+
+.bg-decoration {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.bg-shape {
+    position: absolute;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+}
+
+.bg-shape-1 {
+    width: 250px;
+    height: 250px;
+    top: -125px;
+    right: -125px;
+    animation: bgFloat1 20s linear infinite;
+}
+
+.bg-shape-2 {
+    width: 150px;
+    height: 150px;
+    bottom: -75px;
+    left: -75px;
+    animation: bgFloat2 25s linear infinite;
+}
+
+.bg-shape-3 {
+    width: 100px;
+    height: 100px;
+    top: 50%;
+    left: -50px;
+    animation: bgFloat3 30s linear infinite;
+}

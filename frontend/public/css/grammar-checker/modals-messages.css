@@ -1,0 +1,114 @@
+/* Enhanced Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    position: relative;
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-2xl);
+    max-width: 500px;
+    width: 100%;
+    padding: var(--space-8);
+    text-align: center;
+    transform: scale(0.9);
+    transition: transform var(--transition-base);
+}
+
+.modal:not(.hidden) .modal-content {
+    transform: scale(1);
+}
+
+.modal-header {
+    margin-bottom: var(--space-6);
+}
+
+.modal-header i {
+    font-size: var(--font-size-4xl);
+    margin-bottom: var(--space-3);
+    display: block;
+}
+
+.modal-header h3 {
+    font-size: var(--font-size-xl);
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.modal-body {
+    margin-bottom: var(--space-8);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+}
+
+.modal-body p {
+    margin-bottom: var(--space-3);
+}
+
+.modal-actions {
+    display: flex;
+    gap: var(--space-4);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Message Styles */
+.message-container {
+    margin-top: auto;
+}
+
+.message {
+    padding: var(--space-4);
+    border-radius: var(--border-radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.message.success {
+    background: var(--success-light);
+    color: var(--success-dark);
+    border: 1px solid #bbf7d0;
+}
+
+.message.error {
+    background: var(--error-light);
+    color: var(--error-dark);
+    border: 1px solid #fecaca;
+}
+
+.message::before {
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+}
+
+.message.success::before {
+    content: "\f00c"; /* check icon */
+}
+
+.message.error::before {
+    content: "\f071"; /* warning icon */
+}

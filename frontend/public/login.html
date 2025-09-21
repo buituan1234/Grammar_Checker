@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login - AI Grammar Checker</title>
+  <link rel="stylesheet" href="css/style/main.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+  <div class="auth-page-wrapper">
+    <div class="auth-container">
+      <!-- Left Brand Section (Enhanced từ left-box gradient-bg) -->
+      <div class="brand-section">
+        <!-- Back Arrow Button - Nằm TRONG brand-section -->
+        <a href="introduction.html" class="back-arrow-btn" title="Back to Introduction">
+          <i class="fas fa-arrow-left"></i>
+        </a>
+        
+        <div class="brand-content">
+          <div class="brand-icon">
+            <i class="fas fa-spell-check"></i>
+          </div>
+          <h1 class="brand-title">
+            <span class="brand-text-primary">AI Grammar</span>
+            <span class="brand-text-secondary">Checker</span>
+          </h1>
+          <p class="brand-subtitle">Welcome back! Continue enhancing your writing</p>
+        </div>
+        <!-- Enhanced decorative elements -->
+        <div class="brand-decoration">
+          <div class="floating-element floating-element-1"></div>
+          <div class="floating-element floating-element-2"></div>
+          <div class="floating-element floating-element-3"></div>
+        </div>
+      </div>
+
+      <!-- Right Form Section (Enhanced từ register-form) -->
+      <div class="form-section">
+        <div class="form-header">
+          <h2 class="form-title">Login</h2>
+          <p class="form-subtitle">Sign in to access your account</p>
+        </div>
+
+        <form id="loginForm" class="auth-form">
+          <!-- Username Field (giữ nguyên ID loginUsername cho JS) -->
+          <div class="input-group">
+            <div class="input-wrapper">
+              <input 
+                type="text" 
+                id="loginUsername" 
+                placeholder="Username" 
+                required 
+                autocomplete="username"
+                class="form-input"
+              />
+              <i class="fas fa-user input-icon"></i>
+            </div>
+          </div>
+
+          <!-- Password Field (Enhanced password-wrapper, giữ ID loginPassword) -->
+          <div class="input-group">
+            <div class="input-wrapper password-wrapper">
+              <input 
+                type="password" 
+                id="loginPassword" 
+                placeholder="Password" 
+                required 
+                autocomplete="current-password"
+                class="form-input"
+              />
+              <i class="fas fa-lock input-icon"></i>
+              <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Error/Success Messages (giữ nguyên IDs cho JS) -->
+          <div id="loginGeneralError" class="error-message"></div> 
+          <div id="loginSuccess" class="success-message"></div>
+
+          <!-- Form Options (Remember me + Forgot password) -->
+          <div class="form-options">
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="rememberMe" name="rememberMe" class="checkbox-input" />
+                <span class="checkbox-custom"></span>
+                <span class="checkbox-text">Remember me</span>
+              </label>
+            </div>
+            <a href="#" class="forgot-password-link">Forgot Password?</a>
+          </div>
+          
+          <!-- Submit Button (Enhanced với loading state) -->
+          <button type="submit" class="submit-btn">
+            <span class="btn-text">Login</span>
+            <div class="btn-loading hidden">
+              <div class="spinner"></div>
+              <span>Signing in...</span>
+            </div>
+          </button>
+
+          <!-- Register Link (giữ nguyên logic animate=right) -->
+          <div class="form-footer">
+            <p class="switch-form-text">
+              Don't have an account? 
+              <a href="index.html?animate=right" class="switch-form-link">Register here</a>
+            </p>
+          </div>
+        </form>
+
+        <!-- Optional: Social Login (thêm mới cho enhanced UX) -->
+        <div class="social-login">
+          <div class="divider">
+            <span class="divider-text">Or continue with</span>
+          </div>
+          <div class="social-buttons">
+            <button type="button" class="social-btn social-btn-google" aria-label="Sign in with Google">
+              <i class="fab fa-google"></i>
+              <span>Google</span>
+            </button>
+            <button type="button" class="social-btn social-btn-facebook" aria-label="Sign in with Facebook">
+              <i class="fab fa-facebook-f"></i>
+              <span>Facebook</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Enhanced Background Decoration -->
+    <div class="bg-decoration">
+      <div class="bg-shape bg-shape-1"></div>
+      <div class="bg-shape bg-shape-2"></div>
+      <div class="bg-shape bg-shape-3"></div>
+    </div>
+  </div>
+
+  <!-- Scripts (giữ nguyên như dự án gốc) -->
+  <script type="module" src="js/login.js"></script>
+  <script type="module" src="js/utils.js"></script>
+</body>
+</html>

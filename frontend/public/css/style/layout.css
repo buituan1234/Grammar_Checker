@@ -1,0 +1,30 @@
+.auth-page {
+    min-height: 100vh;
+    background: var(--accent-gradient);
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-page-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+    padding: var(--spacing-md);
+}
+
+.auth-container {
+    display: flex;
+    max-width: 800px;
+    width: 100%;
+    max-height: 85vh;
+    background: var(--white);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-2xl);
+    overflow: hidden;
+    position: relative;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
