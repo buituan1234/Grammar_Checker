@@ -6,7 +6,7 @@
 
 ●Modular JavaScript (import/export)
 
-3. Backend:
+2. Backend:
 ●Node.js, Express.js
 
 ●MSSQL (SQL Server)
@@ -17,7 +17,7 @@
 
 ●Helmet, CORS, Compression, Rate Limiting
 
-5. Công cụ bắt buộc
+3. Công cụ bắt buộc
 ●Node.js (phiên bản 16 hoặc cao hơn)
 
 ●SQL Server (hoặc SQL Server Express)
@@ -32,7 +32,7 @@
 ●Kết hợp nhiều công cụ kiểm tra: LanguageTool và Cohere AI để tăng độ chính xác.
 
 
-3. Giao diện người dùng trực quan
+2. Giao diện người dùng trực quan
 
 ●Giao diện chia làm 2 phần: văn bản gốc và văn bản đã chỉnh sửa.
 
@@ -40,7 +40,7 @@
 
 ●Thống kê: số từ, số ký tự, số lỗi.
 
-5. Hệ thống tài khoản người dùng
+3. Hệ thống tài khoản người dùng
    
 ●Đăng ký, đăng nhập, đăng xuất.
 
@@ -48,7 +48,7 @@
 
 ●Quản lý thông tin cá nhân: username, email, phone, fullName.
 
-7. Admin Dashboard
+4. Admin Dashboard
    
 ●Quản lý người dùng: xem, thêm, sửa, xóa.
 
@@ -56,7 +56,7 @@
 
 ●Gửi thông báo đến người dùng khi có thay đổi thông tin.
 
-9. Hệ thống thông báo (Notifications)
+5. Hệ thống thông báo (Notifications)
     
 ●Thông báo real-time khi admin cập nhật thông tin user.
 
@@ -64,13 +64,13 @@
 
 ●Hiển thị số thông báo chưa đọc.
 
-11. Cơ chế fallback và cache
+6. Cơ chế fallback và cache
     
 ●Sử dụng Cohere AI như fallback nếu LanguageTool không trả về kết quả.
 
 ●Cache kết quả kiểm tra để tăng tốc độ phản hồi.
 
-13. Bảo mật
+7. Bảo mật
     
 ●Xác thực người dùng qua JWT (token).
 
