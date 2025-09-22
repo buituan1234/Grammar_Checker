@@ -1,3 +1,5 @@
+1 ứng dụng web để kiểm tra ngữ pháp đa ngôn ngữ, tích hợp AI, có hệ thống user và admin, thông báo real-time, và giao diện thân thiện.
+
 🛠 Công nghệ sử dụng
 1. Frontend:
 
