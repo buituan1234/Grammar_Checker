@@ -7,7 +7,6 @@
 
 // API management functions
 const AdminAPI = {
-  // Load users from server
   async loadUsers() {
     showLoading(true);
 
@@ -73,7 +72,6 @@ const AdminAPI = {
 
   // Normalize user data from different API formats
   normalizeUsersData(usersData) {
-    // THÊM 3 DÒNG DEBUG NÀY
     console.log('=== DEBUG normalizeUsersData ===');
     console.log('Raw usersData:', usersData);
     console.log('First user UpdatedAt:', usersData[0]?.UpdatedAt);
@@ -90,7 +88,6 @@ const AdminAPI = {
         createdAt: user.CreatedAt || user.createdAt || new Date().toISOString(),
         updatedAt: user.UpdatedAt || user.updatedAt || null,
         
-        // THÊM DEBUG CHO TỪNG USER
         _debugUpdatedAt: user.UpdatedAt,
         _debugupdatedAt: user.updatedAt
     }));
@@ -146,7 +143,6 @@ async updateUser(userId, userData) {
   try {
     log('Starting user update', { userId, userData });
     
-    // Ensure we have admin access
     const currentAdmin = getUserData();
     if (!currentAdmin || currentAdmin.userRole !== 'admin') {
       throw new Error('Admin access required');
@@ -165,7 +161,6 @@ async updateUser(userId, userData) {
       fullName: userData.fullName || currentUserData.fullName
     };
     
-    // Handle status, accountType, and role explicitly
     if (userData.hasOwnProperty('status')) {
       updatePayload.status = userData.status;
     } else {
@@ -191,7 +186,6 @@ async updateUser(userId, userData) {
     
     log('Final update payload', updatePayload);
     
-    // Make API request
     let response;
     try {
       response = await makeAuthenticatedRequest(`${CONFIG.API_BASE_URL}/users/admin/update/${userId}`, {
@@ -206,7 +200,6 @@ async updateUser(userId, userData) {
     // Log response để debug
     log('API response received', response);
     
-    // Use user data from API response if available
     if (response && response.user) {
       const apiUser = response.user;
       log('API returned user data', apiUser);
@@ -231,7 +224,6 @@ async updateUser(userId, userData) {
       updateStatistics();
       renderUserTable();
       
-      // Track changes for notification
       const changes = [];
       if (currentUserData.status !== updatedUser.status) {
         changes.push(`Status: ${currentUserData.status} → ${updatedUser.status}`);
@@ -254,7 +246,6 @@ async updateUser(userId, userData) {
       return updatedUser;
       
     } else {
-      // Fallback to old method if API doesn't return user data
       const updatedUser = {
         id: Number(userId),
         username: updatePayload.username,
@@ -265,7 +256,7 @@ async updateUser(userId, userData) {
         accountType: updatePayload.accountType,
         status: updatePayload.status,
         createdAt: currentUserData.createdAt,
-        updatedAt: new Date().toISOString() // Fallback to local time
+        updatedAt: new Date().toISOString() 
       };
       
       // Update state and UI immediately
@@ -273,7 +264,6 @@ async updateUser(userId, userData) {
       updateStatistics();
       renderUserTable();
       
-      // Track changes for notification
       const changes = [];
       if (currentUserData.status !== updatedUser.status) {
         changes.push(`Status: ${currentUserData.status} → ${updatedUser.status}`);

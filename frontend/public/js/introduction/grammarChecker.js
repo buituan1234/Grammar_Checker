@@ -63,7 +63,6 @@ function findErrors(text) {
 
 // Simulate API call for grammar checking
 export async function performDemoGrammarCheck(text, language) {
-    // Simulate realistic API delay
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     const mockErrors = findErrors(text);

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard - Grammar Checker Analytics</title>
+  
+  <!-- External CSS -->
+  <link rel="stylesheet" href="css/admin/main.css">
+  <link rel="stylesheet" href="css/admin/dashboard.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body>  
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1>🚀 Grammar Checker Admin Dashboard</h1>
+        <p>Welcome, <span id="adminUsername">admin</span> 
+           <span class="status-indicator status-loading" id="connectionStatus"></span>
+           <span id="connectionText">Connecting to database...</span>
+        </p>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-secondary" id="backToAdminBtn">
+          <i class="fas fa-arrow-left"></i> Back to Admin Panel
+        </button>
+        <button class="btn btn-success" id="exportStatsBtn">
+          <i class="fas fa-download"></i> Export Excel
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+      <h2 class="dashboard-title">
+        <i class="fas fa-chart-bar"></i>
+        Dashboard Overview
+      </h2>
+      <div class="dashboard-actions">
+        <button id="refreshDashboardBtn" class="btn btn-secondary">
+          <i class="fas fa-sync-alt"></i>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Overview Cards -->
+    <div class="overview-cards" id="overviewCards">
+      <div class="overview-card card-users">
+        <div class="card-header">
+          <div class="card-title">Total Users</div>
+          <div class="card-icon icon-users">
+            <i class="fas fa-users"></i>
+          </div>
+        </div>
+        <div class="card-value" id="totalUsersCount">-</div>
+        <div class="card-subtitle">
+          <span id="activeUsersCount">-</span> active users
+        </div>
+      </div>
+
+      <div class="overview-card card-activity">
+        <div class="card-header">
+          <div class="card-title">Grammar Checks</div>
+          <div class="card-icon icon-activity">
+            <i class="fas fa-spell-check"></i>
+          </div>
+        </div>
+        <div class="card-value" id="grammarChecksCount">-</div>
+        <div class="card-subtitle">
+          <span id="todayChecksCount">-</span> checks today
+        </div>
+      </div>
+
+      <div class="overview-card card-languages">
+        <div class="card-header">
+          <div class="card-title">Languages Used</div>
+          <div class="card-icon icon-languages">
+            <i class="fas fa-language"></i>
+          </div>
+        </div>
+        <div class="card-value" id="languagesCount">-</div>
+        <div class="card-subtitle">
+          Most used: <span id="mostUsedLanguage">-</span>
+        </div>
+      </div>
+
+      <div class="overview-card card-notifications">
+        <div class="card-header">
+          <div class="card-title">Notifications</div>
+          <div class="card-icon icon-notifications">
+            <i class="fas fa-bell"></i>
+          </div>
+        </div>
+        <div class="card-value" id="totalNotificationsCount">-</div>
+        <div class="card-subtitle">
+          <span id="unreadNotificationsCount">-</span> unread
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-section">
+      <!-- Account Types Chart -->
+      <div class="chart-container">
+        <div class="chart-title">
+          <i class="fas fa-chart-pie"></i>
+          Account Types Distribution
+        </div>
+        <div class="chart-content">
+          <canvas id="accountTypesChart" class="chart-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Top Languages Chart -->
+      <div class="chart-container">
+        <div class="chart-title">
+          <i class="fas fa-chart-bar"></i>
+          Top Languages Usage
+        </div>
+        <div class="chart-content">
+          <canvas id="languagesChart" class="chart-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Traffic Timeline Chart -->
+      <div class="chart-container full-width-chart">
+        <div class="chart-title">
+          <i class="fas fa-chart-line"></i>
+          Activity Timeline
+          <div class="chart-controls">
+            <select id="timeframeSelect" class="form-select">
+              <option value="hour">Last 24 Hours</option>
+              <option value="day" selected>Last 30 Days</option>
+              <option value="month">Last 12 Months</option>
+              <option value="year">All Years</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-content">
+          <canvas id="timelineChart" class="chart-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading/Error States -->
+    <div id="dashboardLoading" class="loading-spinner hidden">
+      <i class="fas fa-spinner fa-spin fa-2x"></i>
+      <span style="margin-left: 10px;">Loading dashboard data...</span>
+    </div>
+
+    <div id="dashboardError" class="error-message hidden">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span style="margin-left: 10px;">Error loading dashboard data. Please refresh the page.</span>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- External JavaScript -->
+  <script src="js/admin/admin-config.js"></script>
+  <script src="js/admin/admin-utils.js"></script>
+  <script src="js/admin/admin-api.js"></script>
+  <script src="js/admin/dashboard.js"></script>
+</body>
+</html>

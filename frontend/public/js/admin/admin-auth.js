@@ -7,7 +7,6 @@
 
 // Authentication management
 const AdminAuth = {
-  // Validate authentication for admin panel access
   validateAuthentication() {
     const userData = getUserData();
     

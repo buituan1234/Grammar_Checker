@@ -7,7 +7,6 @@
 
 // Form management functions
 const AdminForms = {
-  // Get form data from modal
   getFormData() {
     const data = {
       username: elements.username?.value?.trim() || '',
@@ -21,7 +20,6 @@ const AdminForms = {
     }
 
     if (AppState.isEditMode && AppState.currentEditingUserId) {
-      // In edit mode, read checkbox states
       const isActiveEl = document.getElementById('isActive');
       const isPlusEl = document.getElementById('isPlusAccount'); 
       const isAdminEl = document.getElementById('isAdmin');
@@ -40,7 +38,6 @@ const AdminForms = {
         editingUserId: AppState.currentEditingUserId
       });
     } else {
-      // Add mode defaults
       data.status = 'active';
       data.accountType = 'free';
       data.role = 'user';
@@ -59,8 +56,6 @@ const AdminForms = {
     if (elements.phone) elements.phone.value = user.phone || '';
     if (elements.fullName) elements.fullName.value = user.fullName || '';
     if (elements.password) elements.password.value = '';
-    
-    // Set checkboxes with explicit boolean values
     if (elements.isActive) {
       elements.isActive.checked = (user.status === 'active');
       log('Set isActive checkbox', { userStatus: user.status, checked: elements.isActive.checked });

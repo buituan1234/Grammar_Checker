@@ -7,41 +7,24 @@
 
 // Main admin panel initialization
 const AdminMain = {
-  // Initialize the entire admin panel
   async init() {
     try {
       log('Initializing Enhanced Admin Panel v8.0.0 (Complete Modular System)...');
-      
-      // Step 1: Validate authentication
-      if (!validateAuthentication()) {
+        if (!validateAuthentication()) {
         return;
       }
-      
-      // Step 2: Initialize DOM elements
       initializeElements();
-      
-      // Step 3: Setup event listeners
       initializeEventListeners();
-      
-      // Step 4: Setup input fixes and styling
       setupInputFixes();
       setupPasswordToggle();
-      
-      // Step 5: Update admin info in header
       const userData = getUserData();
       if (userData && elements.adminUsername) {
         elements.adminUsername.textContent = userData.username || 'admin';
       }
-      
-      // Step 6: Load initial data
       await loadUsers();
-      
-      // Step 7: Show welcome notification
       if (userData) {
         showToast('Admin Panel Ready', `Welcome ${userData.username}! Complete modular system loaded.`, 'success', 3000);
       }
-      
-      // Step 8: Setup auto-refresh (optional)
       this.setupAutoRefresh();
       
       log('Enhanced admin panel initialization complete');
@@ -56,7 +39,6 @@ const AdminMain = {
   setupAutoRefresh() {
     if (CONFIG.AUTO_REFRESH_INTERVAL > 0) {
       AppState.autoRefreshTimer = setInterval(() => {
-        // Only refresh if not in edit mode and not loading
         if (!AppState.isEditMode && !AppState.isLoading) {
           log('Auto-refresh triggered');
           loadUsers();
@@ -124,7 +106,6 @@ const AdminMain = {
 
   // Setup legacy globals for backward compatibility
   setupLegacyGlobals() {
-    // Export AdminPanel object
     window.AdminPanel = {
       init: this.init.bind(this),
       loadUsers,

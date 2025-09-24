@@ -32,8 +32,8 @@ export function startNotificationCleanup(dbPool) {
             console.error('Error during automatic notification cleanup:', error);
         }
     }, {
-        scheduled: false, // Don't start immediately
-        timezone: "Asia/Ho_Chi_Minh" // Set to Vietnam timezone
+        scheduled: false, 
+        timezone: "Asia/Ho_Chi_Minh" 
     });
 
     // Start the scheduled job
@@ -55,7 +55,7 @@ export function startNotificationCleanup(dbPool) {
         } catch (error) {
             console.error('Error during initial cleanup:', error);
         }
-    }, 5000); // Run after 5 seconds of server startup
+    }, 5000); 
 
     return cleanupJob;
 }

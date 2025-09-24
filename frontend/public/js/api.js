@@ -51,15 +51,12 @@ if (typeof window !== 'undefined') window.grammarCache = frontendCache;
    ========================= */
 function getUserData() {
   try {
-    // Check user key first
     let loggedData = localStorage.getItem("loggedInAs_user");
     
-    // Fallback to admin key
     if (!loggedData) {
       loggedData = localStorage.getItem("loggedInAs_admin");
     }
     
-    // Fallback to legacy key
     if (!loggedData) {
       loggedData = localStorage.getItem("loggedInAs");
     }
@@ -71,6 +68,34 @@ function getUserData() {
     return null;
   }
 }
+
+export async function logUsageActivity(data) {
+    try {
+        const userData = getUserData(); 
+        const payload = {
+          user_id: userData?.userId ?? userData?.id ?? null,
+          username: userData?.username ?? userData?.name ?? null,
+          action: data.action || null,
+          language: data.language || null,   // thêm dòng này
+          metadata: data.details ?? data.metadata ?? {},
+          user_agent: navigator.userAgent || '',
+          session_id: sessionStorage.getItem('sessionId') || ''
+        };
+
+        await fetch('/api/usage/log', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': userData?.userId?.toString() || '',
+                'x-user-role': userData?.userRole || 'guest'
+            },
+            body: JSON.stringify(payload)
+        });
+    } catch (error) {
+        console.error('Error logging usage:', error);
+    }
+}
+
 
 async function safeJson(response) {
   try {

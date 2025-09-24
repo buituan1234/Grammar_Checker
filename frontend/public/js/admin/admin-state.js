@@ -21,9 +21,7 @@ const AppState = {
 // DOM elements cache
 let elements = {};
 
-// State management functions
 const AdminState = {
-  // Users management
   setUsers(users) {
     AppState.allUsers = users;
     AppState.filteredUsers = [...users];

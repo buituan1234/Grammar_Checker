@@ -70,13 +70,11 @@ document.addEventListener("DOMContentLoaded", () => {
         clearError(confirmPasswordError);
         clearError(phoneError);
         clearError(emailError);
-        // ✅ ADDED: Clear fullName error
         clearError(fullNameError);
         clearError(registerSuccess);
         clearError(registerGeneralError);
     }
 
-    // Enhanced validation with better UX
     function validateForm() {
         let isValid = true;
         let firstErrorField = null;
@@ -129,7 +127,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // Focus first error field
         if (firstErrorField) {
             firstErrorField.focus();
         }
@@ -138,7 +135,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Enhanced real-time validation
-    // ✅ ADDED: Full Name real-time validation
     fullNameInput?.addEventListener('input', () => {
         if (fullNameInput.value.trim().length >= 2) {
             clearError(fullNameError);
@@ -155,7 +151,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (passwordInput.value.length >= 6) {
             clearError(passwordError);
         }
-        // Also check confirm password if it has value
         if (confirmPasswordInput.value && passwordInput.value === confirmPasswordInput.value) {
             clearError(confirmPasswordError);
         }
@@ -181,40 +176,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Enhanced toggle password functionality
-    document.querySelectorAll(".toggle-password").forEach(btn => {
-        btn.addEventListener("click", function (e) {
+    document.querySelectorAll('.toggle-password').forEach(btn => {
+        btn.addEventListener('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
-            
-            // Find the password input (previous sibling)
-            const passwordWrapper = this.closest('.password-wrapper');
-            const passwordInput = passwordWrapper?.querySelector('input[type="password"], input[type="text"]');
-            const icon = this.querySelector('i');
-            
-            if (passwordInput && icon) {
-                if (passwordInput.type === 'password') {
-                    passwordInput.type = 'text';
-                    icon.classList.remove('fa-eye');
-                    icon.classList.add('fa-eye-slash');
-                    this.setAttribute('aria-label', 'Hide password');
-                } else {
-                    passwordInput.type = 'password';
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
-                    this.setAttribute('aria-label', 'Show password');
-                }
-            }
+            togglePassword(this.querySelector('i')); 
         });
     });
 
-    // Enhanced form submission
     registerForm?.addEventListener("submit", async function(e) {
         e.preventDefault();
         clearMessages();
 
         if (validateForm()) {
-            // ✅ FIXED: Get all required field values including fullName
             const fullName = fullNameInput.value.trim();
             const username = usernameInput.value.trim();
             const password = passwordInput.value;
@@ -222,10 +196,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const phone = phoneInput.value.trim();
 
             try {
-                // Show loading state
                 toggleSubmitButton(true);
 
-                // ✅ FIXED: Include fullName in the data object
                 const data = await registerUser({ fullName, username, password, email, phone });
 
                 if (data.success) {
@@ -235,7 +207,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     const params = new URLSearchParams(window.location.search);
                     const redirectTo = params.get('redirect');
 
-                    // Add exit animation
                     setTimeout(() => {
                         const authContainer = document.querySelector('.auth-container');
                         if (authContainer) {
@@ -245,7 +216,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         }
                     }, 1000);
 
-                    // Redirect after animation
                     setTimeout(() => {
                         if (redirectTo) {
                             window.location.href = redirectTo;
@@ -264,7 +234,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 showCustomAlert(errorMsg, 'error');
                 displayError(registerGeneralError, errorMsg);
             } finally {
-                // Hide loading state
                 toggleSubmitButton(false);
             }
         } else {
@@ -272,7 +241,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Enhanced page animations
     const animationParams = new URLSearchParams(window.location.search);
     if (animationParams.get("animate") === "right") {
         const authContainer = document.querySelector('.auth-container');
@@ -281,7 +249,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Enhanced page transition effects
     const switchFormLinks = document.querySelectorAll('.switch-form-link');
     switchFormLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -289,7 +256,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const href = link.getAttribute('href');
             
             if (href) {
-                // Add exit animation
                 const authContainer = document.querySelector('.auth-container');
                 if (authContainer) {
                     authContainer.style.transform = 'translateX(-100px)';
@@ -297,7 +263,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     authContainer.style.transition = 'all 0.3s ease-out';
                 }
                 
-                // Navigate after animation
                 setTimeout(() => {
                     window.location.href = href;
                 }, 300);
@@ -311,7 +276,6 @@ document.addEventListener("DOMContentLoaded", () => {
         backArrowBtn.addEventListener('click', (e) => {
             e.preventDefault();
             
-            // Add exit animation
             const authContainer = document.querySelector('.auth-container');
             if (authContainer) {
                 authContainer.style.transform = 'scale(0.95)';
@@ -319,17 +283,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 authContainer.style.transition = 'all 0.3s ease-out';
             }
             
-            // Navigate after animation
             setTimeout(() => {
                 window.location.href = backArrowBtn.href;
             }, 300);
         });
     }
 
-    // Enhanced keyboard navigation
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            // Clear any active states
             document.activeElement?.blur();
             clearMessages();
         }
@@ -342,7 +303,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ✅ UPDATED: Auto-focus first empty input (including fullName)
     setTimeout(() => {
         if (!fullNameInput?.value) {
             fullNameInput?.focus();
@@ -357,14 +317,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 100);
 
-    // Enhanced form reset functionality
     function resetForm() {
         registerForm?.reset();
         clearMessages();
-        fullNameInput?.focus(); // ✅ UPDATED: Focus fullName first
+        fullNameInput?.focus(); 
     }
 
-    // Add reset functionality if needed
     const resetBtn = document.querySelector('.reset-btn');
     if (resetBtn) {
         resetBtn.addEventListener('click', (e) => {

@@ -7,12 +7,10 @@
 
 // Storage management functions
 const AdminStorage = {
-  // Get storage key based on user role
   getStorageKey(userRole) {
     return userRole === 'admin' ? CONFIG.ADMIN_STORAGE_KEY : CONFIG.USER_STORAGE_KEY;
   },
 
-  // Set user data with appropriate storage key
   setUserData(userData) {
     try {
       const storageKey = this.getStorageKey(userData.userRole);
@@ -26,7 +24,6 @@ const AdminStorage = {
         loginTime: new Date().toISOString()
       };
       
-      // Validate required fields
       if (!dataToStore.userId || !dataToStore.username || !dataToStore.userRole) {
         throw new Error('Incomplete user data');
       }
@@ -56,7 +53,6 @@ const AdminStorage = {
       let storageKey = null;
       
       if (isAdminPanel()) {
-        // On admin panel, try admin storage first
         storageKey = CONFIG.ADMIN_STORAGE_KEY;
         const adminData = localStorage.getItem(storageKey);
         if (adminData) {
@@ -64,7 +60,6 @@ const AdminStorage = {
           log('Retrieved admin data from admin storage', userData);
         }
       } else {
-        // On user pages, try user storage first
         storageKey = CONFIG.USER_STORAGE_KEY;
         const regularUserData = localStorage.getItem(storageKey);
         if (regularUserData) {
@@ -73,19 +68,16 @@ const AdminStorage = {
         }
       }
       
-      // If no data found in appropriate storage, try legacy migration
       if (!userData) {
         userData = this.migrateLegacyData();
       }
       
-      // Validate user data
       if (userData) {
         if (!userData.username || !userData.userRole) {
           log('Invalid user data structure', userData, 'warn');
           return null;
         }
         
-        // On admin panel, ensure user is admin
         if (isAdminPanel() && userData.userRole !== 'admin') {
           log('Non-admin user trying to access admin panel', userData, 'warn');
           return null;
@@ -110,11 +102,9 @@ const AdminStorage = {
       
       log('Migrating legacy data', userData);
       
-      // Store in appropriate new location
       const newStorageKey = this.getStorageKey(userData.userRole);
       localStorage.setItem(newStorageKey, legacyData);
       
-      // Remove legacy data
       localStorage.removeItem(CONFIG.LEGACY_STORAGE_KEY);
       
       log(`Legacy data migrated to: ${newStorageKey}`);
@@ -143,11 +133,9 @@ const AdminStorage = {
 // Storage change monitoring
 function monitorStorageChanges() {
   window.addEventListener('storage', function(e) {
-    // Only react to changes in our storage keys
     if (e.key === CONFIG.ADMIN_STORAGE_KEY || e.key === CONFIG.USER_STORAGE_KEY || e.key === CONFIG.LEGACY_STORAGE_KEY) {
       log('Storage change detected', { key: e.key, newValue: e.newValue ? 'Data present' : 'Data removed' });
       
-      // Check if our authentication is still valid
       const currentUser = AdminStorage.getUserData();
       if (!currentUser && isAdminPanel()) {
         showToast('Session Changed', 'Admin session was modified in another tab', 'warning', 3000);

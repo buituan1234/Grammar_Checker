@@ -7,7 +7,6 @@
 
 // UI management functions
 const AdminUI = {
-  // Update statistics display
   updateStatistics() {
     const stats = {
       total: AppState.allUsers.length,

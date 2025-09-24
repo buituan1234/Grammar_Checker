@@ -42,13 +42,12 @@ function log(message, data = null, level = 'info') {
 function formatDate(dateString) {
   if (!dateString) return 'N/A';
   try {
-    // Parse trực tiếp từ string không để JS convert timezone
     const parts = dateString.match(/(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
     if (parts) {
       const [, year, month, day, hour, minute] = parts;
       return `${new Date(year, month-1, day).toLocaleDateString('en-US', {month: 'short'})} ${day}, ${year}, ${hour.padStart(2,'0')}:${minute}`;
     }
-    return dateString; // fallback
+    return dateString; 
   } catch (e) {
     return 'Invalid Date';
   }
@@ -59,7 +58,6 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Check if current page is admin panel
 function isAdminPanel() {
   return window.location.pathname.includes('admin') || 
          window.location.href.includes('admin') ||
@@ -70,18 +68,15 @@ function isAdminPanel() {
 // Initialize DOM elements
 function initializeElements() {
   elements = {
-    // Header elements
     adminUsername: document.getElementById('adminUsername'),
     connectionStatus: document.getElementById('connectionStatus'),
     connectionText: document.getElementById('connectionText'),
     logoutBtn: document.getElementById('logoutBtn'),
     
-    // Statistics elements
     totalUsers: document.getElementById('totalUsers'),
     activeUsers: document.getElementById('activeUsers'),
     plusUsers: document.getElementById('plusUsers'),
     
-    // Table elements
     searchInput: document.getElementById('searchInput'),
     userTableBody: document.getElementById('userTableBody'),
     refreshBtn: document.getElementById('refreshBtn'),
@@ -89,7 +84,6 @@ function initializeElements() {
     debugInfo: document.getElementById('debugInfo'),
     debugContent: document.getElementById('debugContent'),
     
-    // Modal elements
     userModal: document.getElementById('userModal'),
     modalTitle: document.getElementById('modalTitle'),
     userForm: document.getElementById('userForm'),
@@ -99,7 +93,6 @@ function initializeElements() {
     saveBtnText: document.getElementById('saveBtnText'),
     saveBtnLoader: document.getElementById('saveBtnLoader'),
     
-    // Form fields
     editUserId: document.getElementById('editUserId'),
     username: document.getElementById('username'),
     email: document.getElementById('email'),
@@ -109,14 +102,12 @@ function initializeElements() {
     passwordRequired: document.getElementById('passwordRequired'),
     passwordHint: document.getElementById('passwordHint'),
     
-    // Account settings
     accountSettings: document.getElementById('accountSettings'),
     isActive: document.getElementById('isActive'),
     isPlusAccount: document.getElementById('isPlusAccount'),
     isAdmin: document.getElementById('isAdmin'),
     roleSelection: document.getElementById('roleSelection'),
     
-    // Quick toggle modal
     quickToggleModal: document.getElementById('quickToggleModal'),
     quickToggleUsername: document.getElementById('quickToggleUsername'),
     quickToggleOptions: document.getElementById('quickToggleOptions'),
@@ -125,7 +116,6 @@ function initializeElements() {
     quickToggleBtnText: document.getElementById('quickToggleBtnText'),
     quickToggleBtnLoader: document.getElementById('quickToggleBtnLoader'),
     
-    // Other elements
     loadingOverlay: document.getElementById('loadingOverlay'),
     toastContainer: document.getElementById('toastContainer')
   };
@@ -138,11 +128,9 @@ function fixInputStyling() {
   const inputs = document.querySelectorAll('input, select');
   
   inputs.forEach(input => {
-    // Remove all HTML5 validation attributes
     input.removeAttribute('aria-invalid');
     input.removeAttribute('aria-describedby');
     
-    // Remove any invalid/valid classes
     input.classList.remove('invalid', 'valid', 'error');
     
     // Force reset styling
@@ -172,7 +160,6 @@ function fixInputStyling() {
 
 // Setup input fixes
 function setupInputFixes() {
-  // Observer for modal changes
   const userModal = document.getElementById('userModal');
   if (userModal) {
     const observer = new MutationObserver(function(mutations) {
@@ -212,7 +199,8 @@ function setupPasswordToggle() {
         }
       }
     }
-  });
+  }
+);
 }
 
 // Export functions

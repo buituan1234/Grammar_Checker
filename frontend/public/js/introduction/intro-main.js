@@ -96,14 +96,12 @@ function setupButtonHandlers() {
 
 // Setup modal event listeners
 function setupModalHandlers() {
-    // Handle modal close buttons with data attributes
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('close') && e.target.dataset.modal === 'usageLimitModal') {
             closeUsageLimitModal();
         }
     });
 
-    // Close modal when clicking outside
     window.addEventListener('click', (event) => {
         const modal = document.getElementById('usageLimitModal');
         if (event.target === modal) {
@@ -116,17 +114,14 @@ function setupModalHandlers() {
 function initializeApp() {
     console.log('🚀 Initializing Enhanced AI Grammar Editor...');
     
-    // Initialize UI components
     initSmoothScrolling();
     initAccordion();
     updateButtonVisibility();
     initPageTransitions();
     
-    // Setup event handlers
     setupButtonHandlers();
     setupModalHandlers();
     
-    // Setup demo functionality if elements exist
     const demoCheckBtn = document.getElementById('demoCheckBtn');
     if (demoCheckBtn) {
         demoCheckBtn.addEventListener('click', checkDemoGrammar);
@@ -138,7 +133,6 @@ function initializeApp() {
 // Main DOMContentLoaded event listener
 document.addEventListener('DOMContentLoaded', initializeApp);
 
-// Export functions for global access (for backward compatibility)
 window.showToast = showToast;
 window.showCustomAlert = showCustomAlert;
 window.closeUsageLimitModal = closeUsageLimitModal;

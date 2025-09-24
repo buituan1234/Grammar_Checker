@@ -2,16 +2,13 @@
 
 // Toast notification system
 export function showToast(message, type = 'success', duration = 4000) {
-    // Remove existing toasts
     const existingToasts = document.querySelectorAll('.toast');
     existingToasts.forEach(toast => toast.remove());
     
-    // Create new toast
     const toast = document.createElement('div');
     toast.className = `toast show ${type}`;
     toast.innerHTML = `<span id="toastMessage">${message}</span>`;
     
-    // Apply type-specific styling
     const colors = {
         error: '#e74c3c',
         info: '#3498db',
@@ -51,7 +48,6 @@ export function showToast(message, type = 'success', duration = 4000) {
     }, duration);
 }
 
-// Loading overlay control
 export function showLoading(show = true) {
     let overlay = document.getElementById('loadingOverlay');
     
@@ -60,12 +56,10 @@ export function showLoading(show = true) {
     }
 }
 
-// Custom alert function
 export function showCustomAlert(message, type = 'info', duration = 3000) {
     showToast(message, type, duration);
 }
 
-// Debounce function for performance
 export function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {

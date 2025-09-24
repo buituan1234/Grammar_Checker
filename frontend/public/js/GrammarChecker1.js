@@ -1,6 +1,6 @@
 // GrammarChecker1.js
 import { SectionManager } from './sectionManager.js';
-import { checkGrammar, detectLanguage } from './api.js';
+import { checkGrammar, detectLanguage, logUsageActivity } from './api.js'; 
 import { showCustomAlert } from './utils.js';
 import { NotificationManager } from './notifications.js';
 
@@ -22,6 +22,12 @@ async function initializeNotifications(user) {
   }
   
   try {
+    await logUsageActivity({
+      action: 'page_access',
+      language: null,
+      details: { page: 'grammar_checker' }
+    });
+
     console.log('Initializing notifications for user:', user.username);
     
     // Đảm bảo chỉ có 1 instance duy nhất
@@ -419,6 +425,18 @@ function getLoggedInUser() {
       const { matches = [] } = await checkGrammar(text);
       localStorage.setItem('lastGrammarMatches', JSON.stringify(matches));
 
+      if (loggedInUser?.userId) {
+        await logUsageActivity({
+          action: 'grammar_check',
+          language: detectedLang, 
+          details: {
+            text_length: text.length,
+            errors_found: matches.length,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+
       if (!matches.length) {
         highlightedTextDiv.textContent = text;
         showNoSuggestions();
@@ -478,51 +496,5 @@ function getLoggedInUser() {
       </div>
     `;
   }
-  /*******************************
- * Notifications Dropdown Logic
- *******************************/
-
-// Lấy phần tử từ DOM
-/*
-const notificationIcon = document.querySelector(".notification-icon");
-const notificationDropdown = document.getElementById("notificationDropdown");
-const notificationList = document.getElementById("notificationList");
-const seeAllBtn = document.getElementById("seeAllBtn");
-
-// Toggle dropdown khi click chuông
-if (notificationIcon) {
-  notificationIcon.addEventListener("click", () => {
-    notificationDropdown.classList.toggle("hidden");
-  });
-}
-
-// Hàm thêm thông báo
-function addNotification(message) {
-  if (!notificationList) return;
-
-  const li = document.createElement("li");
-  li.textContent = message;
-
-  notificationList.prepend(li);
-
-  setTimeout(() => {
-    li.remove();
-  }, 3600000);
-}
-
-if (seeAllBtn) {
-  seeAllBtn.addEventListener("click", () => {
-    alert("Redirect to full notifications page (chưa code).");
-  });
-}
-
-function onAccountTypeUpdated(newType) {
-  addNotification(`Your account type has been updated to: ${newType}`);
-}
-
-setTimeout(() => {
-  onAccountTypeUpdated("Premium");
-}, 5000);
-*/
 });
 

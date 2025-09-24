@@ -1,13 +1,13 @@
 // frontend/public/js/login.js
 
-import { loginUser } from './api.js'; 
+import { loginUser, logUsageActivity } from './api.js';
 import { showCustomAlert, togglePassword } from './utils.js';
 
 function displayError(elementId, message) {
     const element = document.getElementById(elementId);
     if (element) {
         element.textContent = message;
-        element.style.color = '#ef4444'; // Use CSS variable color
+        element.style.color = '#ef4444'; 
         element.style.display = 'block';
     }
 }
@@ -24,7 +24,7 @@ function displaySuccess(elementId, message) {
     const element = document.getElementById(elementId);
     if (element) {
         element.textContent = message;
-        element.style.color = '#10b981'; // Use CSS variable color
+        element.style.color = '#10b981'; 
         element.style.display = 'block';
     }
 }
@@ -60,28 +60,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 👁️ Enhanced toggle password functionality
     document.querySelectorAll('.toggle-password').forEach(btn => {
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Find the password input (previous sibling)
-            const passwordWrapper = this.closest('.password-wrapper');
-            const passwordInput = passwordWrapper?.querySelector('input[type="password"], input[type="text"]');
-            const icon = this.querySelector('i');
-            
-            if (passwordInput && icon) {
-                if (passwordInput.type === 'password') {
-                    passwordInput.type = 'text';
-                    icon.classList.remove('fa-eye');
-                    icon.classList.add('fa-eye-slash');
-                    this.setAttribute('aria-label', 'Hide password');
-                } else {
-                    passwordInput.type = 'password';
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
-                    this.setAttribute('aria-label', 'Show password');
-                }
-            }
+    btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        togglePassword(this.querySelector('i'));
         });
     });
 
@@ -98,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Enhanced animation for page transition
     const animateParam = urlParams.get('animate');
     if (animateParam === 'left') {
-        // Updated to use new container class
         const authContainer = document.querySelector('.auth-container');
         if (authContainer) {
             authContainer.classList.add('slide-in-left');
@@ -127,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!password) {
             displayError('loginGeneralError', 'Password is required.');
-            if (isValid) passwordInput?.focus(); // Only focus if no previous errors
+            if (isValid) passwordInput?.focus(); 
             isValid = false;
         } else if (password.length < 6) {
             displayError('loginGeneralError', 'Password must be at least 6 characters.');
@@ -156,11 +138,9 @@ document.addEventListener('DOMContentLoaded', () => {
         loginForm.addEventListener('submit', async (event) => {
             event.preventDefault();
 
-            // Clear previous messages
             clearError('loginGeneralError');
             clearError('loginSuccess');
 
-            // Validate form
             if (!validateLoginForm()) {
                 return;
             }
@@ -169,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = passwordInput.value;
 
             try {
-                // Show loading state
                 toggleSubmitButton(true);
                 
                 const response = await loginUser(username, password);
@@ -184,19 +163,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         userRole: response.userRole
                     };
 
-                    // Store user data
                     const storageKey = userToStore.userRole === 'admin' ? 'loggedInAs_admin' : 'loggedInAs_user';
                     localStorage.setItem(storageKey, JSON.stringify(userToStore));
 
-                    // Show success message
+                    await logUsageActivity({
+                    action: 'login',
+                    language: null,
+                    details: { 
+                     login_method: 'username_password',
+                     user_role: userToStore.userRole 
+                    }
+                    });
                     showCustomAlert("Login successful! Redirecting...", 'success');
                     displaySuccess('loginSuccess', 'Login successful! Redirecting...');
 
-                    // Determine redirect URL
                     const redirectTo = urlParams.get('redirect') ||
                         (userToStore.userRole === 'admin' ? '/admin.html' : '/GrammarChecker1.html');
 
-                    // Add exit animation
                     setTimeout(() => {
                         const authContainer = document.querySelector('.auth-container');
                         if (authContainer) {
@@ -206,7 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }, 1000);
 
-                    // Redirect after animation
                     setTimeout(() => {
                         window.location.href = redirectTo;
                     }, 1500);
@@ -222,13 +204,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 showCustomAlert(errorMsg, 'error');
                 displayError('loginGeneralError', errorMsg);
             } finally {
-                // Hide loading state
                 toggleSubmitButton(false);
             }
         });
     }
 
-    // Enhanced social login buttons (if they exist)
     document.querySelectorAll('.social-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -237,7 +217,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Enhanced page transition effects
     const switchFormLinks = document.querySelectorAll('.switch-form-link');
     switchFormLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -245,7 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const href = link.getAttribute('href');
             
             if (href) {
-                // Add exit animation
                 const authContainer = document.querySelector('.auth-container');
                 if (authContainer) {
                     authContainer.style.transform = 'translateX(100px)';
@@ -253,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     authContainer.style.transition = 'all 0.3s ease-out';
                 }
                 
-                // Navigate after animation
                 setTimeout(() => {
                     window.location.href = href;
                 }, 300);
@@ -261,10 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // Enhanced keyboard navigation
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            // Clear any active states
             document.activeElement?.blur();
             clearError('loginGeneralError');
         }
@@ -277,7 +252,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Auto-focus first empty input
     setTimeout(() => {
         if (!usernameInput?.value) {
             usernameInput?.focus();

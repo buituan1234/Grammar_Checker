@@ -7,14 +7,11 @@
 
 // Event management functions
 const AdminEvents = {
-  // Initialize all event listeners
   initializeEventListeners() {
-    // Header events
     if (elements.logoutBtn) {
       elements.logoutBtn.addEventListener('click', handleLogout);
     }
     
-    // Search and refresh
     if (elements.searchInput) {
       elements.searchInput.addEventListener('input', this.handleSearch);
     }
@@ -25,7 +22,6 @@ const AdminEvents = {
       elements.debugBtn.addEventListener('click', toggleDebug);
     }
     
-    // Modal events
     if (elements.addUserBtn) {
       elements.addUserBtn.addEventListener('click', showAddUserModal);
     }
@@ -36,7 +32,6 @@ const AdminEvents = {
       elements.userForm.addEventListener('submit', handleFormSubmit);
     }
     
-    // Quick toggle modal events
     if (elements.quickToggleCancelBtn) {
       elements.quickToggleCancelBtn.addEventListener('click', hideQuickToggleModal);
     }
@@ -44,22 +39,11 @@ const AdminEvents = {
       elements.quickToggleConfirmBtn.addEventListener('click', handleQuickToggleConfirm);
     }
     
-    // Modal background click to close
     this.setupModalCloseEvents();
-    
-    // Toast events
     this.setupToastEvents();
-    
-    // Form field validation events
     this.setupFormValidationEvents();
-    
-    // Account settings checkbox events
     this.setupCheckboxEvents();
-    
-    // Keyboard shortcuts
     this.setupKeyboardShortcuts();
-    
-    // Storage monitoring
     monitorStorageChanges();
     
     log('Event listeners initialized successfully');
@@ -73,7 +57,6 @@ const AdminEvents = {
     elements.userTableBody.addEventListener('click', this.handleTableClick);
   },
 
-  // Handle table clicks
   handleTableClick(e) {
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -95,7 +78,6 @@ const AdminEvents = {
   handleSearch() {
     if (!elements.searchInput) return;
     
-    // Clear previous timeout
     if (AppState.searchTimeout) {
       clearTimeout(AppState.searchTimeout);
     }
@@ -244,6 +226,36 @@ const AdminEvents = {
     log('Keyboard shortcuts setup completed');
   }
 };
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Setting up dashboard button event listener');
+    
+    const dashboardBtn = document.getElementById('dashboardBtn');
+    if (dashboardBtn) {
+        console.log('Dashboard button found, adding event listener');
+        dashboardBtn.addEventListener('click', function(e) {
+            console.log('Dashboard button clicked - redirecting...');
+            e.preventDefault();
+            e.stopPropagation();
+            window.location.href = 'admin-dashboard.html';
+        });
+    } else {
+        console.error('Dashboard button not found in DOM');
+    }
+});
+
+setTimeout(function() {
+    const dashboardBtn = document.getElementById('dashboardBtn');
+    if (dashboardBtn && !dashboardBtn.hasAttribute('data-listener-added')) {
+        console.log('Adding backup dashboard listener');
+        dashboardBtn.setAttribute('data-listener-added', 'true');
+        dashboardBtn.addEventListener('click', function(e) {
+            console.log('Backup dashboard listener triggered');
+            e.preventDefault();
+            window.location.href = 'admin-dashboard.html';
+        });
+    }
+}, 300000);
 
 // Legacy wrapper functions for backward compatibility
 function initializeEventListeners() {

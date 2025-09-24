@@ -1,6 +1,5 @@
 // backend/routes/statsRoutes.js
 import express from 'express';
-import sql from 'mssql';
 
 const router = express.Router();
 
@@ -66,148 +65,203 @@ router.get('/account-types', isAdmin, async (req, res) => {
 
 // GET /api/stats/languages - Language usage statistics
 router.get('/languages', isAdmin, async (req, res) => {
-    try {
-        const pool = getDbPool(req);
-        
-        // Note: This assumes you have a GrammarChecks table or similar
-        // If not, we'll create mock data for now
-        const result = await pool.request().query(`
-            SELECT 
-                'en-US' as language, 'English (US)' as language_name, 450 as usage_count
-            UNION ALL
-            SELECT 'vi' as language, 'Vietnamese' as language_name, 120 as usage_count
-            UNION ALL
-            SELECT 'fr' as language, 'French' as language_name, 80 as usage_count
-            UNION ALL
-            SELECT 'de' as language, 'German' as language_name, 65 as usage_count
-            UNION ALL
-            SELECT 'es' as language, 'Spanish' as language_name, 55 as usage_count
-            UNION ALL
-            SELECT 'ja-JP' as language, 'Japanese' as language_name, 30 as usage_count
-            ORDER BY usage_count DESC
-        `);
+  try {
+    const pool = getDbPool(req);
 
-        const totalUsage = result.recordset.reduce((sum, item) => sum + item.usage_count, 0);
-        
-        const stats = {
-            total_usage: totalUsage,
-            most_used: result.recordset[0],
-            least_used: result.recordset[result.recordset.length - 1],
-            languages: result.recordset.map(item => ({
-                language: item.language,
-                language_name: item.language_name,
-                usage_count: item.usage_count,
-                percentage: ((item.usage_count / totalUsage) * 100).toFixed(2)
-            }))
-        };
+    // Thống kê số lần sử dụng theo ngôn ngữ từ bảng UsageLogs
+    const result = await pool.request().query(`
+      SELECT 
+        ISNULL(Language, 'unknown') AS language,
+        COUNT(*) AS usage_count
+      FROM UsageLogs
+      WHERE Action = 'grammar_check'
+      GROUP BY ISNULL(Language, 'unknown')
+      ORDER BY usage_count DESC;
+    `);
 
-        res.json({
-            success: true,
-            data: stats
-        });
-
-    } catch (err) {
-        console.error('Error fetching language stats:', err);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error fetching language statistics.'
-        });
-    }
-});
-
-// GET /api/stats/timeframe?range=hour|day|month|year - Traffic statistics
-router.get('/timeframe', isAdmin, async (req, res) => {
-    try {
-        const { range = 'day' } = req.query;
-        const pool = getDbPool(req);
-        
-        let query = '';
-        let groupBy = '';
-        let orderBy = '';
-        
-        switch (range) {
-            case 'hour':
-                query = `
-                    SELECT 
-                        DATEPART(HOUR, CreatedAt) as period,
-                        'Hour ' + CAST(DATEPART(HOUR, CreatedAt) AS VARCHAR(2)) as period_label,
-                        COUNT(*) as activity_count
-                    FROM Users 
-                    WHERE CreatedAt >= DATEADD(day, -1, GETDATE())
-                    GROUP BY DATEPART(HOUR, CreatedAt)
-                    ORDER BY period
-                `;
-                break;
-                
-            case 'day':
-                query = `
-                    SELECT 
-                        CAST(CreatedAt AS DATE) as period,
-                        FORMAT(CreatedAt, 'MMM dd') as period_label,
-                        COUNT(*) as activity_count
-                    FROM Users 
-                    WHERE CreatedAt >= DATEADD(day, -30, GETDATE())
-                    GROUP BY CAST(CreatedAt AS DATE)
-                    ORDER BY period
-                `;
-                break;
-                
-            case 'month':
-                query = `
-                    SELECT 
-                        YEAR(CreatedAt) * 100 + MONTH(CreatedAt) as period,
-                        FORMAT(CreatedAt, 'MMM yyyy') as period_label,
-                        COUNT(*) as activity_count
-                    FROM Users 
-                    WHERE CreatedAt >= DATEADD(month, -12, GETDATE())
-                    GROUP BY YEAR(CreatedAt), MONTH(CreatedAt)
-                    ORDER BY period
-                `;
-                break;
-                
-            case 'year':
-                query = `
-                    SELECT 
-                        YEAR(CreatedAt) as period,
-                        CAST(YEAR(CreatedAt) AS VARCHAR(4)) as period_label,
-                        COUNT(*) as activity_count
-                    FROM Users 
-                    GROUP BY YEAR(CreatedAt)
-                    ORDER BY period
-                `;
-                break;
-                
-            default:
-                return res.status(400).json({
-                    success: false,
-                    error: 'Invalid range. Use: hour, day, month, or year'
-                });
+    if (!result.recordset || result.recordset.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          total_usage: 0,
+          most_used: null,
+          least_used: null,
+          languages: []
         }
-        
-        const result = await pool.request().query(query);
-        
-        const stats = {
-            range: range,
-            total_activity: result.recordset.reduce((sum, item) => sum + item.activity_count, 0),
-            data: result.recordset.map(item => ({
-                period: item.period_label,
-                count: item.activity_count
-            }))
-        };
-
-        res.json({
-            success: true,
-            data: stats
-        });
-
-    } catch (err) {
-        console.error('Error fetching timeframe stats:', err);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error fetching timeframe statistics.'
-        });
+      });
     }
+
+    // Bản đồ ngôn ngữ -> tên hiển thị
+    const languageMap = {
+      'en-US': 'English (US)',
+      'vi': 'Vietnamese',
+      'fr': 'French',
+      'de': 'German',
+      'es': 'Spanish',
+      'ja-JP': 'Japanese',
+      'unknown': 'Unknown'
+    };
+
+    const totalUsage = result.recordset.reduce((sum, item) => sum + item.usage_count, 0);
+
+    const stats = {
+      total_usage: totalUsage,
+      most_used: {
+        ...result.recordset[0],
+        language_name: languageMap[result.recordset[0].language] || result.recordset[0].language
+      },
+      least_used: {
+        ...result.recordset[result.recordset.length - 1],
+        language_name: languageMap[result.recordset[result.recordset.length - 1].language] || result.recordset[result.recordset.length - 1].language
+      },
+      languages: result.recordset.map(item => ({
+        language: item.language,
+        language_name: languageMap[item.language] || item.language,
+        usage_count: item.usage_count,
+        percentage: ((item.usage_count / totalUsage) * 100).toFixed(2)
+      }))
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+
+  } catch (err) {
+    console.error('Error fetching language stats:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error fetching language statistics: ' + err.message
+    });
+  }
 });
+
+// GET /api/stats/timeframe?range=hour|day|month|year&action=login
+router.get('/timeframe', isAdmin, async (req, res) => {
+  try {
+    const { range = 'day', action } = req.query;
+    const pool = getDbPool(req);
+
+    if (!['hour', 'day', 'month', 'year'].includes(range)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid range. Use: hour, day, month, or year"
+      });
+    }
+
+    // Nếu có action thì lọc, ví dụ action=login
+    const actionFilter = action ? `AND u.Action = '${action}'` : '';
+
+    let query = '';
+
+    switch (range) {
+      case 'hour': 
+        query = `
+          ;WITH Hours AS (
+            SELECT 0 AS h UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3
+            UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7
+            UNION ALL SELECT 8 UNION ALL SELECT 9 UNION ALL SELECT 10 UNION ALL SELECT 11
+            UNION ALL SELECT 12 UNION ALL SELECT 13 UNION ALL SELECT 14 UNION ALL SELECT 15
+            UNION ALL SELECT 16 UNION ALL SELECT 17 UNION ALL SELECT 18 UNION ALL SELECT 19
+            UNION ALL SELECT 20 UNION ALL SELECT 21 UNION ALL SELECT 22 UNION ALL SELECT 23
+          )
+          SELECT 
+            h AS period,
+            'Hour ' + CAST(h AS VARCHAR(2)) AS period_label,
+            COUNT(u.LogID) AS activity_count
+          FROM Hours h
+          LEFT JOIN UsageLogs u
+            ON DATEPART(HOUR, u.CreatedAt) = h.h
+           AND u.CreatedAt >= DATEADD(day, -1, GETDATE())
+           ${actionFilter}
+          GROUP BY h
+          ORDER BY h;
+        `;
+        break;
+
+      case 'day': 
+        query = `
+          ;WITH Days AS (
+            SELECT CAST(GETDATE() AS DATE) AS d
+            UNION ALL
+            SELECT DATEADD(DAY, -1, d) FROM Days WHERE d > DATEADD(DAY, -29, GETDATE())
+          )
+          SELECT 
+            d AS period,
+            FORMAT(d, 'MMM dd') AS period_label,
+            COUNT(u.LogID) AS activity_count
+          FROM Days
+          LEFT JOIN UsageLogs u
+            ON CAST(u.CreatedAt AS DATE) = d
+           ${actionFilter}
+          GROUP BY d
+          ORDER BY d;
+        `;
+        break;
+
+      case 'month': 
+        query = `
+          ;WITH Months AS (
+            SELECT DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1) AS m
+            UNION ALL
+            SELECT DATEADD(MONTH, -1, m) FROM Months WHERE m > DATEADD(MONTH, -11, GETDATE())
+          )
+          SELECT 
+            YEAR(m) * 100 + MONTH(m) AS period,
+            FORMAT(m, 'MMM yyyy') AS period_label,
+            COUNT(u.LogID) AS activity_count
+          FROM Months
+          LEFT JOIN UsageLogs u
+            ON YEAR(u.CreatedAt) = YEAR(m) 
+           AND MONTH(u.CreatedAt) = MONTH(m)
+           ${actionFilter}
+          GROUP BY m
+          ORDER BY m;
+        `;
+        break;
+
+      case 'year': 
+        query = `
+          ;WITH Years AS (
+            SELECT YEAR(GETDATE()) AS y
+            UNION ALL
+            SELECT y - 1 FROM Years WHERE y > YEAR(GETDATE()) - 4
+          )
+          SELECT 
+            y AS period,
+            CAST(y AS VARCHAR(4)) AS period_label,
+            COUNT(u.LogID) AS activity_count
+          FROM Years
+          LEFT JOIN UsageLogs u
+            ON YEAR(u.CreatedAt) = y
+           ${actionFilter}
+          GROUP BY y
+          ORDER BY y;
+        `;
+        break;
+    }
+
+    const result = await pool.request().query(query);
+
+    const stats = {
+      range,
+      total_activity: result.recordset.reduce((sum, item) => sum + item.activity_count, 0),
+      data: result.recordset.map(item => ({
+        period: item.period_label,
+        count: item.activity_count
+      }))
+    };
+
+    res.json({ success: true, data: stats });
+  } catch (err) {
+    console.error('Error fetching timeframe stats:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error fetching timeframe statistics: ' + err.message
+    });
+  }
+});
+
 
 // GET /api/stats/overview - Dashboard overview stats
 router.get('/overview', isAdmin, async (req, res) => {

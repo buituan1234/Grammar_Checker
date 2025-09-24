@@ -7,7 +7,6 @@
 
 // Debug management functions
 const AdminDebug = {
-  // Debug authentication
   debugAuth() {
     console.log('=== Authentication Debug ===');
     console.log('Admin Storage Key:', CONFIG.ADMIN_STORAGE_KEY);

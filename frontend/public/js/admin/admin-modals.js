@@ -7,7 +7,6 @@
 
 // Modal management functions
 const AdminModals = {
-  // Show add user modal
   showAddUserModal() {
     this.resetModalState();
     
@@ -75,7 +74,6 @@ const AdminModals = {
     setTimeout(fixInputStyling, 100);
   },
 
-  // Reset modal state
   resetModalState() {
     AdminState.clearEditMode();
     

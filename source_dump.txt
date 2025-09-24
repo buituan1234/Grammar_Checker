@@ -12,6 +12,8 @@ Grammar_Checker/
 │   ├── routes/
 │   │   ├── grammar.js
 │   │   ├── notificationRoutes.js
+│   │   ├── statsRoutes.js
+│   │   ├── usageRoutes.js
 │   │   └── userRoutes.js
 │   ├── services/
 │   │   ├── cohereService.js
@@ -29,6 +31,7 @@ Grammar_Checker/
 │       │   │   ├── buttons.css
 │       │   │   ├── cards.css
 │       │   │   ├── checkboxes.css
+│       │   │   ├── dashboard.css
 │       │   │   ├── forms.css
 │       │   │   ├── header.css
 │       │   │   ├── main.css
@@ -102,7 +105,8 @@ Grammar_Checker/
 │       │   │   ├── admin-state.js
 │       │   │   ├── admin-storage.js
 │       │   │   ├── admin-ui.js
-│       │   │   └── admin-utils.js
+│       │   │   ├── admin-utils.js
+│       │   │   └── dashboard.js
 │       │   ├── introduction/
 │       │   │   ├── demoHandler.js
 │       │   │   ├── grammarChecker.js
@@ -120,12 +124,14 @@ Grammar_Checker/
 │       │   ├── sectionManager.js
 │       │   └── utils.js
 │       ├── GrammarChecker1.html
+│       ├── admin-dashboard.html
 │       ├── admin.html
 │       ├── index.html
 │       ├── introduction.html
 │       └── login.html
 ├── node_modules/
 ├── .env
+├── .gitignore
 ├── package-lock.json
 ├── package.json
 └── source_dump.txt
@@ -148,6 +154,10 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import notificationRoutes from './routes/notificationRoutes.js';
 import { startNotificationCleanup } from './services/notificationCleanup.js';
+import statsRoutes from './routes/statsRoutes.js';
+import grammarRoutes from './routes/grammar.js'; 
+import userRoutes from './routes/userRoutes.js'; 
+import usageRoutes from './routes/usageRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -210,14 +220,14 @@ app.use(cors());
 app.use(compression());
 
 // ✅ FIX: Admin-specific CSP configuration BEFORE general helmet
-app.use(['/admin.html', '/admin', '/pages/admin.html', '/pages/admin'], (req, res, next) => {
+app.use(['/admin.html', '/admin-dashboard.html', '/admin*'], (req, res, next) => {
     console.log('🔓 Setting permissive CSP for admin route:', req.path);
     
     // Set very permissive CSP for admin pages only
     res.setHeader('Content-Security-Policy', 
         "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob: ws: wss:; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; " +
-        "script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob: https://cdnjs.cloudflare.com; " +
+        "script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob: https://cdnjs.cloudflare.com; " +
         "style-src 'self' 'unsafe-inline' https: data:; " +
         "font-src 'self' https: data:; " +
         "img-src 'self' https: data: blob:; " +
@@ -225,24 +235,30 @@ app.use(['/admin.html', '/admin', '/pages/admin.html', '/pages/admin'], (req, re
         "object-src 'none'; " +
         "base-uri 'self';"
     );
-    
     next();
 });
 
 // ✅ FIX: General helmet configuration for other routes
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https:"],
-            fontSrc: ["'self'", "https:", "data:"],
-            imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'"],
+app.use((req, res, next) => {
+    if (req.path.includes('admin')) {
+        // Skip helmet CSP for admin pages
+        return next();
+    }
+    
+    helmet({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", "'unsafe-inline'"],
+                styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+                fontSrc: ["'self'", "https:", "data:"],
+                imgSrc: ["'self'", "data:", "https:"],
+                connectSrc: ["'self'"],
+            },
         },
-    },
-    crossOriginEmbedderPolicy: false, // Fix for some issues
-}));
+        crossOriginEmbedderPolicy: false,
+    })(req, res, next);
+});
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
@@ -275,13 +291,14 @@ app.get('/', (req, res) => {
 });
 
 // Routes
-import grammarRoutes from './routes/grammar.js'; 
 app.use('/api/grammar', grammarRoutes); 
 
-import userRoutes from './routes/userRoutes.js'; 
 app.use('/api/users', userRoutes);
 
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/stats', statsRoutes);
+
+app.use('/api/usage', usageRoutes);
 
 app.get('/health', (req, res) => {
     res.json({ 
@@ -951,6 +968,489 @@ router.get('/admin/stats', isAdmin, async (req, res) => {
             success: false,
             error: 'Internal server error fetching stats.',
             details: err.message
+        });
+    }
+});
+
+export default router;
+```
+
+### backend\routes\statsRoutes.js
+```js
+// backend/routes/statsRoutes.js
+import express from 'express';
+import sql from 'mssql';
+
+const router = express.Router();
+
+// Utility function to get database pool
+function getDbPool(req) {
+    if (!req.app.locals.db) {
+        console.error('Database pool not available in req.app.locals.db');
+        throw new Error('Database pool not available.');
+    }
+    return req.app.locals.db;
+}
+
+// Middleware to check if user is admin
+const isAdmin = (req, res, next) => {
+    const userRole = req.headers['x-user-role'] || req.body.userRole;
+    if (userRole === 'admin') {
+        next();
+    } else {
+        res.status(403).json({ 
+            success: false, 
+            error: 'Access denied. Admin privileges required.'
+        });
+    }
+};
+
+// GET /api/stats/account-types - Account type statistics
+router.get('/account-types', isAdmin, async (req, res) => {
+    try {
+        const pool = getDbPool(req);
+        const result = await pool.request().query(`
+            SELECT 
+                AccountType,
+                COUNT(*) as count,
+                CAST(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER() AS DECIMAL(5,2)) as percentage
+            FROM Users 
+            WHERE UserStatus = 'active'
+            GROUP BY AccountType
+            ORDER BY count DESC
+        `);
+
+        const stats = {
+            total: result.recordset.reduce((sum, item) => sum + item.count, 0),
+            breakdown: result.recordset.map(item => ({
+                type: item.AccountType,
+                count: item.count,
+                percentage: parseFloat(item.percentage)
+            }))
+        };
+
+        res.json({
+            success: true,
+            data: stats
+        });
+
+    } catch (err) {
+        console.error('Error fetching account type stats:', err);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error fetching account statistics.'
+        });
+    }
+});
+
+// GET /api/stats/languages - Language usage statistics
+router.get('/languages', isAdmin, async (req, res) => {
+    try {
+        const pool = getDbPool(req);
+        
+        // Note: This assumes you have a GrammarChecks table or similar
+        // If not, we'll create mock data for now
+        const result = await pool.request().query(`
+            SELECT 
+                'en-US' as language, 'English (US)' as language_name, 450 as usage_count
+            UNION ALL
+            SELECT 'vi' as language, 'Vietnamese' as language_name, 120 as usage_count
+            UNION ALL
+            SELECT 'fr' as language, 'French' as language_name, 80 as usage_count
+            UNION ALL
+            SELECT 'de' as language, 'German' as language_name, 65 as usage_count
+            UNION ALL
+            SELECT 'es' as language, 'Spanish' as language_name, 55 as usage_count
+            UNION ALL
+            SELECT 'ja-JP' as language, 'Japanese' as language_name, 30 as usage_count
+            ORDER BY usage_count DESC
+        `);
+
+        const totalUsage = result.recordset.reduce((sum, item) => sum + item.usage_count, 0);
+        
+        const stats = {
+            total_usage: totalUsage,
+            most_used: result.recordset[0],
+            least_used: result.recordset[result.recordset.length - 1],
+            languages: result.recordset.map(item => ({
+                language: item.language,
+                language_name: item.language_name,
+                usage_count: item.usage_count,
+                percentage: ((item.usage_count / totalUsage) * 100).toFixed(2)
+            }))
+        };
+
+        res.json({
+            success: true,
+            data: stats
+        });
+
+    } catch (err) {
+        console.error('Error fetching language stats:', err);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error fetching language statistics.'
+        });
+    }
+});
+
+// GET /api/stats/timeframe?range=hour|day|month|year - Traffic statistics
+router.get('/timeframe', isAdmin, async (req, res) => {
+    try {
+        const { range = 'day', action } = req.query; 
+        const pool = getDbPool(req);
+        
+        console.log('Timeframe request:', { range, action }); 
+        
+        let query = '';
+        
+        // Validate range parameter
+        if (!['hour', 'day', 'month', 'year'].includes(range)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid range. Use: hour, day, month, or year'
+            });
+        }
+        
+        // If action is grammar_check, try to use UsageLogs table if it exists
+        if (action === 'grammar_check') {
+            try {
+                // Test if UsageLogs table exists
+                await pool.request().query("SELECT TOP 1 * FROM UsageLogs WHERE 1=0");
+                
+                // UsageLogs exists, use it for grammar check data
+                switch (range) {
+                    case 'hour':
+                        query = `
+                            SELECT 
+                                DATEPART(HOUR, created_at) as period,
+                                'Hour ' + CAST(DATEPART(HOUR, created_at) AS VARCHAR(2)) as period_label,
+                                COUNT(*) as activity_count
+                            FROM UsageLogs 
+                            WHERE action = 'grammar_check'
+                            AND created_at >= DATEADD(day, -1, GETDATE())
+                            GROUP BY DATEPART(HOUR, created_at)
+                            ORDER BY period
+                        `;
+                        break;
+                        
+                    case 'day':
+                        query = `
+                            SELECT 
+                                CAST(created_at AS DATE) as period,
+                                FORMAT(created_at, 'MMM dd') as period_label,
+                                COUNT(*) as activity_count
+                            FROM UsageLogs 
+                            WHERE action = 'grammar_check'
+                            AND created_at >= DATEADD(day, -30, GETDATE())
+                            GROUP BY CAST(created_at AS DATE)
+                            ORDER BY period
+                        `;
+                        break;
+                        
+                    case 'month':
+                        query = `
+                            SELECT 
+                                YEAR(created_at) * 100 + MONTH(created_at) as period,
+                                FORMAT(created_at, 'MMM yyyy') as period_label,
+                                COUNT(*) as activity_count
+                            FROM UsageLogs 
+                            WHERE action = 'grammar_check'
+                            AND created_at >= DATEADD(month, -12, GETDATE())
+                            GROUP BY YEAR(created_at), MONTH(created_at)
+                            ORDER BY period
+                        `;
+                        break;
+                        
+                    case 'year':
+                        query = `
+                            SELECT 
+                                YEAR(created_at) as period,
+                                CAST(YEAR(created_at) AS VARCHAR(4)) as period_label,
+                                COUNT(*) as activity_count
+                            FROM UsageLogs 
+                            WHERE action = 'grammar_check'
+                            GROUP BY YEAR(created_at)
+                            ORDER BY period
+                        `;
+                        break;
+                }
+                
+                const result = await pool.request().query(query);
+                
+                if (result.recordset && result.recordset.length > 0) {
+                    const stats = {
+                        range: range,
+                        total_activity: result.recordset.reduce((sum, item) => sum + item.activity_count, 0),
+                        data: result.recordset.map(item => ({
+                            period: item.period_label,
+                            count: item.activity_count
+                        }))
+                    };
+
+                    return res.json({
+                        success: true,
+                        data: stats
+                    });
+                }
+                
+            } catch (usageLogsError) {
+                console.log('UsageLogs not available or no data, falling back to mock data:', usageLogsError.message);
+            }
+        }
+        
+        // Fallback: Generate mock data based on Users table or create sample data
+        console.log('Generating mock timeframe data for range:', range);
+        
+        let mockData = [];
+        const now = new Date();
+        
+        switch (range) {
+            case 'hour':
+                for (let i = 23; i >= 0; i--) {
+                    const hour = (now.getHours() - i + 24) % 24;
+                    mockData.push({
+                        period_label: `Hour ${hour}`,
+                        activity_count: Math.floor(Math.random() * 20) + 5
+                    });
+                }
+                break;
+                
+            case 'day':
+                for (let i = 29; i >= 0; i--) {
+                    const date = new Date(now);
+                    date.setDate(date.getDate() - i);
+                    mockData.push({
+                        period_label: date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }),
+                        activity_count: Math.floor(Math.random() * 50) + 10
+                    });
+                }
+                break;
+                
+            case 'month':
+                for (let i = 11; i >= 0; i--) {
+                    const date = new Date(now);
+                    date.setMonth(date.getMonth() - i);
+                    mockData.push({
+                        period_label: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+                        activity_count: Math.floor(Math.random() * 500) + 100
+                    });
+                }
+                break;
+                
+            case 'year':
+                const currentYear = now.getFullYear();
+                for (let i = 2; i >= 0; i--) {
+                    const year = currentYear - i;
+                    mockData.push({
+                        period_label: year.toString(),
+                        activity_count: Math.floor(Math.random() * 2000) + 500
+                    });
+                }
+                break;
+        }
+        
+        const stats = {
+            range: range,
+            total_activity: mockData.reduce((sum, item) => sum + item.activity_count, 0),
+            data: mockData.map(item => ({
+                period: item.period_label,
+                count: item.activity_count
+            }))
+        };
+
+        res.json({
+            success: true,
+            data: stats
+        });
+
+    } catch (err) {
+        console.error('Error fetching timeframe stats:', err);
+        console.error('Error details:', err.stack);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error fetching timeframe statistics: ' + err.message
+        });
+    }
+});
+
+// GET /api/stats/overview - Dashboard overview stats
+router.get('/overview', isAdmin, async (req, res) => {
+    try {
+        const pool = getDbPool(req);
+        
+        // Get multiple statistics in one go
+        const result = await pool.request().query(`
+            -- Total users by status
+            SELECT 'total_users' as stat_type, COUNT(*) as value
+            FROM Users
+            
+            UNION ALL
+            
+            -- Active users
+            SELECT 'active_users' as stat_type, COUNT(*) as value
+            FROM Users WHERE UserStatus = 'active'
+            
+            UNION ALL
+            
+            -- Total notifications
+            SELECT 'total_notifications' as stat_type, COUNT(*) as value
+            FROM Notifications
+            
+            UNION ALL
+            
+            -- Unread notifications
+            SELECT 'unread_notifications' as stat_type, COUNT(*) as value
+            FROM Notifications WHERE IsRead = 0
+            
+            UNION ALL
+            
+            -- Users created today
+            SELECT 'new_users_today' as stat_type, COUNT(*) as value
+            FROM Users WHERE CAST(CreatedAt AS DATE) = CAST(GETDATE() AS DATE)
+            
+            UNION ALL
+            
+            -- Users created this month
+            SELECT 'new_users_this_month' as stat_type, COUNT(*) as value
+            FROM Users 
+            WHERE YEAR(CreatedAt) = YEAR(GETDATE()) 
+            AND MONTH(CreatedAt) = MONTH(GETDATE())
+        `);
+
+        // Transform result into object
+        const stats = {};
+        result.recordset.forEach(row => {
+            stats[row.stat_type] = row.value;
+        });
+
+        res.json({
+            success: true,
+            data: stats
+        });
+
+    } catch (err) {
+        console.error('Error fetching overview stats:', err);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error fetching overview statistics.'
+        });
+    }
+});
+
+// GET /api/stats/export - Export statistics to Excel
+router.get('/export', isAdmin, async (req, res) => {
+    try {
+        const pool = getDbPool(req);
+        
+        // Get comprehensive data for export
+        const result = await pool.request().query(`
+            SELECT 
+                u.UserID,
+                u.Username,
+                u.Email,
+                u.UserRole,
+                u.AccountType,
+                u.UserStatus,
+                u.CreatedAt,
+                COUNT(n.NotificationID) as NotificationCount,
+                SUM(CASE WHEN n.IsRead = 0 THEN 1 ELSE 0 END) as UnreadNotifications
+            FROM Users u
+            LEFT JOIN Notifications n ON u.UserID = n.UserID
+            GROUP BY u.UserID, u.Username, u.Email, u.UserRole, u.AccountType, u.UserStatus, u.CreatedAt
+            ORDER BY u.CreatedAt DESC
+        `);
+
+        // Format data for export
+        const exportData = {
+            export_date: new Date().toISOString(),
+            total_records: result.recordset.length,
+            data: result.recordset.map(row => ({
+                user_id: row.UserID,
+                username: row.Username,
+                email: row.Email,
+                role: row.UserRole,
+                account_type: row.AccountType,
+                status: row.UserStatus,
+                created_at: row.CreatedAt,
+                notification_count: row.NotificationCount,
+                unread_notifications: row.UnreadNotifications
+            }))
+        };
+
+        res.json({
+            success: true,
+            data: exportData
+        });
+
+    } catch (err) {
+        console.error('Error exporting stats:', err);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error exporting statistics.'
+        });
+    }
+});
+
+export default router;
+```
+
+### backend\routes\usageRoutes.js
+```js
+// backend/routes/usageRoutes.js
+import express from 'express';
+import sql from 'mssql';
+
+const router = express.Router();
+
+// POST /api/usage/log - Log user activity
+router.post('/log', async (req, res) => {
+    try {
+        const pool = req.app.locals.db;
+        if (!pool) {
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Database not available' 
+            });
+        }
+
+        const {
+            user_id,
+            username,
+            action,
+            user_agent,
+            session_id,
+            metadata
+        } = req.body;
+
+        // Get client IP
+        const ip_address = req.ip || 
+                          req.connection.remoteAddress || 
+                          req.socket.remoteAddress ||
+                          (req.connection.socket ? req.connection.socket.remoteAddress : null);
+
+        await pool.request()
+            .input('user_id', sql.Int, user_id)
+            .input('username', sql.NVarChar, username || 'anonymous')
+            .input('action', sql.NVarChar, action)
+            .input('ip_address', sql.NVarChar, ip_address)
+            .input('user_agent', sql.NVarChar, user_agent)
+            .input('session_id', sql.NVarChar, session_id)
+            .input('metadata', sql.NVarChar, metadata || '{}')
+            .query(`
+                INSERT INTO UsageLogs 
+                (user_id, username, action, ip_address, user_agent, session_id, metadata, created_at)
+                VALUES 
+                (@user_id, @username, @action, @ip_address, @user_agent, @session_id, @metadata, GETDATE())
+            `);
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error('Error logging usage:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to log usage' 
         });
     }
 });
@@ -1995,15 +2495,12 @@ if (typeof window !== 'undefined') window.grammarCache = frontendCache;
    ========================= */
 function getUserData() {
   try {
-    // Check user key first
     let loggedData = localStorage.getItem("loggedInAs_user");
     
-    // Fallback to admin key
     if (!loggedData) {
       loggedData = localStorage.getItem("loggedInAs_admin");
     }
     
-    // Fallback to legacy key
     if (!loggedData) {
       loggedData = localStorage.getItem("loggedInAs");
     }
@@ -2014,6 +2511,24 @@ function getUserData() {
     console.error('getUserData parse error', e);
     return null;
   }
+}
+
+export async function logUsageActivity(data) {
+    try {
+        const userData = getUserData();
+        await fetch('/api/usage/log', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': userData?.userId?.toString() || '',
+                'x-user-role': userData?.userRole || 'guest'
+            },
+            body: JSON.stringify(data)
+        });
+    } catch (error) {
+        console.error('Error logging usage:', error);
+        // Don't throw error to avoid breaking user experience
+    }
 }
 
 async function safeJson(response) {
@@ -2215,7 +2730,7 @@ export const cacheManager = frontendCache;
 ```js
 // GrammarChecker1.js
 import { SectionManager } from './sectionManager.js';
-import { checkGrammar, detectLanguage } from './api.js';
+import { checkGrammar, detectLanguage, logUsageActivity } from './api.js'; 
 import { showCustomAlert } from './utils.js';
 import { NotificationManager } from './notifications.js';
 
@@ -2237,6 +2752,12 @@ async function initializeNotifications(user) {
   }
   
   try {
+    await logUsageActivity({
+      action: 'page_access',
+      language: null,
+      details: { page: 'grammar_checker' }
+    });
+
     console.log('Initializing notifications for user:', user.username);
     
     // Đảm bảo chỉ có 1 instance duy nhất
@@ -2634,6 +3155,18 @@ function getLoggedInUser() {
       const { matches = [] } = await checkGrammar(text);
       localStorage.setItem('lastGrammarMatches', JSON.stringify(matches));
 
+      if (loggedInUser?.userId) {
+        await logUsageActivity({
+          action: 'grammar_check',
+          language: lang,
+          details: {
+            text_length: text.length,
+            errors_found: matches.length,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+
       if (!matches.length) {
         highlightedTextDiv.textContent = text;
         showNoSuggestions();
@@ -2693,52 +3226,6 @@ function getLoggedInUser() {
       </div>
     `;
   }
-  /*******************************
- * Notifications Dropdown Logic
- *******************************/
-
-// Lấy phần tử từ DOM
-/*
-const notificationIcon = document.querySelector(".notification-icon");
-const notificationDropdown = document.getElementById("notificationDropdown");
-const notificationList = document.getElementById("notificationList");
-const seeAllBtn = document.getElementById("seeAllBtn");
-
-// Toggle dropdown khi click chuông
-if (notificationIcon) {
-  notificationIcon.addEventListener("click", () => {
-    notificationDropdown.classList.toggle("hidden");
-  });
-}
-
-// Hàm thêm thông báo
-function addNotification(message) {
-  if (!notificationList) return;
-
-  const li = document.createElement("li");
-  li.textContent = message;
-
-  notificationList.prepend(li);
-
-  setTimeout(() => {
-    li.remove();
-  }, 3600000);
-}
-
-if (seeAllBtn) {
-  seeAllBtn.addEventListener("click", () => {
-    alert("Redirect to full notifications page (chưa code).");
-  });
-}
-
-function onAccountTypeUpdated(newType) {
-  addNotification(`Your account type has been updated to: ${newType}`);
-}
-
-setTimeout(() => {
-  onAccountTypeUpdated("Premium");
-}, 5000);
-*/
 });
 
 
@@ -2930,29 +3417,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // Enhanced toggle password functionality
-    document.querySelectorAll(".toggle-password").forEach(btn => {
-        btn.addEventListener("click", function (e) {
+    document.querySelectorAll('.toggle-password').forEach(btn => {
+        btn.addEventListener('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
-            
-            // Find the password input (previous sibling)
-            const passwordWrapper = this.closest('.password-wrapper');
-            const passwordInput = passwordWrapper?.querySelector('input[type="password"], input[type="text"]');
-            const icon = this.querySelector('i');
-            
-            if (passwordInput && icon) {
-                if (passwordInput.type === 'password') {
-                    passwordInput.type = 'text';
-                    icon.classList.remove('fa-eye');
-                    icon.classList.add('fa-eye-slash');
-                    this.setAttribute('aria-label', 'Hide password');
-                } else {
-                    passwordInput.type = 'password';
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
-                    this.setAttribute('aria-label', 'Show password');
-                }
-            }
+            togglePassword(this.querySelector('i')); // iconElement
         });
     });
 
@@ -3147,7 +3616,7 @@ document.addEventListener("DOMContentLoaded", () => {
 ```js
 // frontend/public/js/login.js
 
-import { loginUser } from './api.js'; 
+import { loginUser, logUsageActivity } from './api.js';
 import { showCustomAlert, togglePassword } from './utils.js';
 
 function displayError(elementId, message) {
@@ -3207,28 +3676,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 👁️ Enhanced toggle password functionality
     document.querySelectorAll('.toggle-password').forEach(btn => {
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Find the password input (previous sibling)
-            const passwordWrapper = this.closest('.password-wrapper');
-            const passwordInput = passwordWrapper?.querySelector('input[type="password"], input[type="text"]');
-            const icon = this.querySelector('i');
-            
-            if (passwordInput && icon) {
-                if (passwordInput.type === 'password') {
-                    passwordInput.type = 'text';
-                    icon.classList.remove('fa-eye');
-                    icon.classList.add('fa-eye-slash');
-                    this.setAttribute('aria-label', 'Hide password');
-                } else {
-                    passwordInput.type = 'password';
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
-                    this.setAttribute('aria-label', 'Show password');
-                }
-            }
+    btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        togglePassword(this.querySelector('i'));
         });
     });
 
@@ -3335,6 +3787,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     const storageKey = userToStore.userRole === 'admin' ? 'loggedInAs_admin' : 'loggedInAs_user';
                     localStorage.setItem(storageKey, JSON.stringify(userToStore));
 
+                    await logUsageActivity({
+                    action: 'login',
+                    language: null,
+                    details: { 
+                     login_method: 'username_password',
+                     user_role: userToStore.userRole 
+                    }
+                    });
                     // Show success message
                     showCustomAlert("Login successful! Redirecting...", 'success');
                     displaySuccess('loginSuccess', 'Login successful! Redirecting...');
@@ -4109,22 +4569,18 @@ export function showCustomAlert(message, type = 'info', duration = 3000) {
 
 /**
  * Toggles visibility of a password input field when eye icon is clicked.
- * @param {HTMLElement} iconElement - The eye icon element clicked (usually an <i> tag inside a button or span).
+ * @param {HTMLElement} iconElement 
  */
 export function togglePassword(iconElement) {
-    // Tìm phần tử .password-wrapper hoặc .input-group gần nhất
     const wrapper = iconElement.closest('.password-wrapper, .input-group');
     if (!wrapper) return;
 
-    // Tìm input trong wrapper
     const input = wrapper.querySelector('input[type="password"], input[type="text"]');
     if (!input) return;
 
-    // Toggle type
     const isPassword = input.getAttribute('type') === 'password';
     input.setAttribute('type', isPassword ? 'text' : 'password');
 
-    // Toggle icon class
     iconElement.classList.toggle('fa-eye', !isPassword);
     iconElement.classList.toggle('fa-eye-slash', isPassword);
 }
@@ -5111,22 +5567,11 @@ const AdminEvents = {
       elements.quickToggleConfirmBtn.addEventListener('click', handleQuickToggleConfirm);
     }
     
-    // Modal background click to close
     this.setupModalCloseEvents();
-    
-    // Toast events
     this.setupToastEvents();
-    
-    // Form field validation events
     this.setupFormValidationEvents();
-    
-    // Account settings checkbox events
     this.setupCheckboxEvents();
-    
-    // Keyboard shortcuts
     this.setupKeyboardShortcuts();
-    
-    // Storage monitoring
     monitorStorageChanges();
     
     log('Event listeners initialized successfully');
@@ -5311,6 +5756,36 @@ const AdminEvents = {
     log('Keyboard shortcuts setup completed');
   }
 };
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Setting up dashboard button event listener');
+    
+    const dashboardBtn = document.getElementById('dashboardBtn');
+    if (dashboardBtn) {
+        console.log('Dashboard button found, adding event listener');
+        dashboardBtn.addEventListener('click', function(e) {
+            console.log('Dashboard button clicked - redirecting...');
+            e.preventDefault();
+            e.stopPropagation();
+            window.location.href = 'admin-dashboard.html';
+        });
+    } else {
+        console.error('Dashboard button not found in DOM');
+    }
+});
+
+setTimeout(function() {
+    const dashboardBtn = document.getElementById('dashboardBtn');
+    if (dashboardBtn && !dashboardBtn.hasAttribute('data-listener-added')) {
+        console.log('Adding backup dashboard listener');
+        dashboardBtn.setAttribute('data-listener-added', 'true');
+        dashboardBtn.addEventListener('click', function(e) {
+            console.log('Backup dashboard listener triggered');
+            e.preventDefault();
+            window.location.href = 'admin-dashboard.html';
+        });
+    }
+}, 1000);
 
 // Legacy wrapper functions for backward compatibility
 function initializeEventListeners() {
@@ -5707,41 +6182,24 @@ if (typeof window !== 'undefined') {
 
 // Main admin panel initialization
 const AdminMain = {
-  // Initialize the entire admin panel
   async init() {
     try {
       log('Initializing Enhanced Admin Panel v8.0.0 (Complete Modular System)...');
-      
-      // Step 1: Validate authentication
-      if (!validateAuthentication()) {
+        if (!validateAuthentication()) {
         return;
       }
-      
-      // Step 2: Initialize DOM elements
       initializeElements();
-      
-      // Step 3: Setup event listeners
       initializeEventListeners();
-      
-      // Step 4: Setup input fixes and styling
       setupInputFixes();
       setupPasswordToggle();
-      
-      // Step 5: Update admin info in header
       const userData = getUserData();
       if (userData && elements.adminUsername) {
         elements.adminUsername.textContent = userData.username || 'admin';
       }
-      
-      // Step 6: Load initial data
       await loadUsers();
-      
-      // Step 7: Show welcome notification
       if (userData) {
         showToast('Admin Panel Ready', `Welcome ${userData.username}! Complete modular system loaded.`, 'success', 3000);
       }
-      
-      // Step 8: Setup auto-refresh (optional)
       this.setupAutoRefresh();
       
       log('Enhanced admin panel initialization complete');
@@ -5756,7 +6214,6 @@ const AdminMain = {
   setupAutoRefresh() {
     if (CONFIG.AUTO_REFRESH_INTERVAL > 0) {
       AppState.autoRefreshTimer = setInterval(() => {
-        // Only refresh if not in edit mode and not loading
         if (!AppState.isEditMode && !AppState.isLoading) {
           log('Auto-refresh triggered');
           loadUsers();
@@ -7005,7 +7462,8 @@ function setupPasswordToggle() {
         }
       }
     }
-  });
+  }
+);
 }
 
 // Export functions
@@ -7073,6 +7531,558 @@ if (typeof window !== 'undefined') {
   window.setupInputFixes = setupInputFixes;
   window.setupPasswordToggle = setupPasswordToggle;
   window.exportUsers = exportUsers;
+}
+```
+
+### frontend\public\js\admin\dashboard.js
+```js
+// frontend/public/js/admin/dashboard.js
+class DashboardManager {
+    constructor() {
+        this.charts = {};
+        this.data = {};
+        this.isLoading = false;
+        
+        // Initialize dashboard
+        this.init();
+    }
+
+    async init() {
+        console.log('Initializing dashboard...');
+        
+        // Check admin authentication
+        if (!this.checkAdminAuth()) {
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        // Setup event listeners
+        this.setupEventListeners();
+        
+        // Load initial data
+        await this.loadDashboardData();
+    }
+
+    checkAdminAuth() {
+        const userData = JSON.parse(localStorage.getItem('loggedInAs_admin')) ||
+                        JSON.parse(localStorage.getItem('loggedInAs'));
+        
+        if (!userData || userData.userRole !== 'admin') {
+            console.error('Admin authentication required');
+            return false;
+        }
+        
+        // Update header username
+        document.getElementById('adminUsername').textContent = userData.username || 'Admin';
+        return true;
+    }
+
+    setupEventListeners() {
+        console.log('Setting up dashboard event listeners...');
+
+        // Back to Admin button - ✅ THÊM EVENT LISTENER NÀY
+        document.getElementById('backToAdminBtn')?.addEventListener('click', (e) => {
+            console.log('Back to Admin button clicked');
+            e.preventDefault();
+            window.location.href = 'admin.html';
+        });
+
+        // Refresh button
+        document.getElementById('refreshDashboardBtn')?.addEventListener('click', (e) => {
+            console.log('Refresh dashboard button clicked');
+            e.preventDefault();
+            this.loadDashboardData();
+        });
+
+        // Export button
+        document.getElementById('exportStatsBtn')?.addEventListener('click', (e) => {
+            console.log('Export stats button clicked');
+            e.preventDefault();
+            this.exportStatistics();
+        });
+
+        // Timeframe selector
+        document.getElementById('timeframeSelect')?.addEventListener('change', (e) => {
+            console.log('Timeframe changed:', e.target.value);
+            this.updateTimelineChart(e.target.value);
+        });
+
+        console.log('Dashboard event listeners setup complete');
+    }
+
+    async loadDashboardData() {
+        if (this.isLoading) return;
+        
+        this.isLoading = true;
+        this.showLoading(true);
+        
+        try {
+            console.log('Loading dashboard data...');
+            
+            // Load all data in parallel
+            const [overviewData, accountTypesData, languagesData, timeframeData] = await Promise.all([
+                this.fetchOverviewStats(),
+                this.fetchAccountTypesStats(),
+                this.fetchLanguageStats(),
+                this.fetchTimeframeStats('day')
+            ]);
+
+            this.data = {
+                overview: overviewData,
+                accountTypes: accountTypesData,
+                languages: languagesData,
+                timeframe: timeframeData
+            };
+
+            // Update UI
+            this.updateOverviewCards();
+            this.updateCharts();
+            
+            console.log('Dashboard data loaded successfully:', this.data);
+
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+            this.showError(true);
+            // Show user-friendly error
+            this.showToast('Error', 'Failed to load dashboard data: ' + error.message, 'error');
+        } finally {
+            this.isLoading = false;
+            this.showLoading(false);
+        }
+    }
+
+    async fetchWithAuth(url, options = {}) {
+        const userData = JSON.parse(localStorage.getItem('loggedInAs_admin')) ||
+                        JSON.parse(localStorage.getItem('loggedInAs'));
+        
+        const headers = {
+            'Content-Type': 'application/json',
+            'x-user-role': 'admin',
+            'x-user-id': userData?.userId?.toString() || '',
+            ...options.headers
+        };
+
+        console.log('Fetching:', url, 'with headers:', headers);
+
+        const response = await fetch(url, {
+            ...options,
+            headers
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.error || 'API request failed');
+        }
+
+        return data.data;
+    }
+
+    async fetchOverviewStats() {
+        return await this.fetchWithAuth('/api/stats/overview');
+    }
+
+    async fetchAccountTypesStats() {
+        return await this.fetchWithAuth('/api/stats/account-types');
+    }
+
+    async fetchLanguageStats(days = 30) {
+        return await this.fetchWithAuth(`/api/stats/languages?days=${days}`);
+    }
+
+    async fetchTimeframeStats(range = 'day') {
+        return await this.fetchWithAuth(`/api/stats/timeframe?range=${range}&action=grammar_check`);
+    }
+
+    updateOverviewCards() {
+        console.log('Updating overview cards with data:', this.data.overview);
+        
+        const { overview } = this.data;
+        if (!overview) {
+            console.warn('No overview data available');
+            return;
+        }
+
+        // Update user stats - ✅ SỬA STRUCTURE
+        document.getElementById('totalUsersCount').textContent = overview.total_users || 0;
+        document.getElementById('activeUsersCount').textContent = overview.active_users || 0;
+
+        // Calculate mock data if needed
+        const totalUsers = overview.total_users || 0;
+        const grammarChecks = Math.floor(totalUsers * 25) || 0;
+        const todayChecks = Math.floor(grammarChecks * 0.1) || 0;
+
+        document.getElementById('grammarChecksCount').textContent = grammarChecks;
+        document.getElementById('todayChecksCount').textContent = todayChecks;
+
+        // Update language stats
+        const languageCount = this.data.languages?.languages?.length || 0;
+        document.getElementById('languagesCount').textContent = languageCount;
+        document.getElementById('mostUsedLanguage').textContent = 
+            this.data.languages?.most_used?.language_name || 'N/A';
+
+        // Update notification stats
+        document.getElementById('totalNotificationsCount').textContent = overview.total_notifications || 0;
+        document.getElementById('unreadNotificationsCount').textContent = overview.unread_notifications || 0;
+    }
+
+    updateCharts() {
+        console.log('Updating charts...');
+        this.updateAccountTypesChart();
+        this.updateLanguagesChart();
+        this.updateTimelineChart();
+    }
+
+    updateAccountTypesChart() {
+        const canvas = document.getElementById('accountTypesChart');
+        const { accountTypes } = this.data;
+        
+        if (!canvas || !accountTypes?.breakdown) {
+            console.warn('Cannot update account types chart: missing canvas or data');
+            return;
+        }
+
+        // Destroy existing chart
+        if (this.charts.accountTypes) {
+            this.charts.accountTypes.destroy();
+        }
+
+        const ctx = canvas.getContext('2d');
+        
+        this.charts.accountTypes = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: accountTypes.breakdown.map(item => 
+                    item.type.charAt(0).toUpperCase() + item.type.slice(1)
+                ),
+                datasets: [{
+                    data: accountTypes.breakdown.map(item => item.count),
+                    backgroundColor: [
+                        '#28a745',
+                        '#ffc107',
+                        '#17a2b8',
+                        '#dc3545'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const label = context.label;
+                                const value = context.parsed;
+                                const percentage = accountTypes.breakdown[context.dataIndex].percentage;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    updateLanguagesChart() {
+        const canvas = document.getElementById('languagesChart');
+        const { languages } = this.data;
+        
+        if (!canvas || !languages?.languages) {
+            console.warn('Cannot update languages chart: missing canvas or data');
+            return;
+        }
+
+        // Destroy existing chart
+        if (this.charts.languages) {
+            this.charts.languages.destroy();
+        }
+
+        const ctx = canvas.getContext('2d');
+        
+        // Take top 6 languages
+        const topLanguages = languages.languages.slice(0, 6);
+        
+        this.charts.languages = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: topLanguages.map(item => item.language_name),
+                datasets: [{
+                    label: 'Usage Count',
+                    data: topLanguages.map(item => item.usage_count),
+                    backgroundColor: [
+                        '#007bff',
+                        '#28a745',
+                        '#ffc107',
+                        '#dc3545',
+                        '#17a2b8',
+                        '#6f42c1'
+                    ],
+                    borderWidth: 1,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: (context) => {
+                                const lang = topLanguages[context.dataIndex];
+                                return `Percentage: ${lang.percentage}%`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    updateTimelineChart(range = null) {
+        const canvas = document.getElementById('timelineChart');
+        let { timeframe } = this.data;
+        
+        if (!canvas) {
+            console.warn('Timeline chart canvas not found');
+            return;
+        }
+
+        // If range is specified, fetch new data
+        if (range && range !== timeframe?.range) {
+            this.fetchTimeframeStats(range).then(data => {
+                this.data.timeframe = data;
+                this.updateTimelineChart();
+            }).catch(console.error);
+            return;
+        }
+
+        if (!timeframe?.data) {
+            console.warn('No timeline data available');
+            return;
+        }
+
+        // Destroy existing chart
+        if (this.charts.timeline) {
+            this.charts.timeline.destroy();
+        }
+
+        const ctx = canvas.getContext('2d');
+        
+        this.charts.timeline = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: timeframe.data.map(item => item.period),
+                datasets: [{
+                    label: 'Activities',
+                    data: timeframe.data.map(item => item.count),
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    },
+                    tooltip: {
+                        titleCallback: (tooltipItems) => {
+                            return `Period: ${tooltipItems[0].label}`;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    async exportStatistics() {
+        try {
+            console.log('Starting export...');
+            this.showExportLoading(true);
+            
+            const exportData = await this.fetchWithAuth('/api/stats/export');
+            
+            // Convert to CSV and download
+            this.downloadAsExcel(exportData);
+            
+            this.showToast('Success', 'Statistics exported successfully', 'success');
+            
+        } catch (error) {
+            console.error('Export error:', error);
+            this.showToast('Error', 'Error exporting statistics: ' + error.message, 'error');
+        } finally {
+            this.showExportLoading(false);
+        }
+    }
+
+    downloadAsExcel(data) {
+        // Create CSV content
+        let csvContent = "data:text/csv;charset=utf-8,";
+        
+        // Add headers
+        csvContent += "User ID,Username,Email,Role,Account Type,Status,Created At,Total Notifications,Unread Notifications\n";
+        
+        // Add data rows
+        data.data.forEach(user => {
+            const row = [
+                user.user_id,
+                user.username,
+                user.email,
+                user.role,
+                user.account_type,
+                user.status,
+                user.created_at,
+                user.notification_count,
+                user.unread_notifications
+            ];
+            csvContent += row.map(field => `"${field}"`).join(',') + '\n';
+        });
+
+        // Create download link
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `grammar_checker_stats_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    showLoading(show) {
+        const loading = document.getElementById('dashboardLoading');
+        const error = document.getElementById('dashboardError');
+        
+        if (loading) {
+            loading.classList.toggle('hidden', !show);
+        }
+        if (error) {
+            error.classList.add('hidden');
+        }
+    }
+
+    showError(show) {
+        const loading = document.getElementById('dashboardLoading');
+        const error = document.getElementById('dashboardError');
+        
+        if (loading) {
+            loading.classList.add('hidden');
+        }
+        if (error) {
+            error.classList.toggle('hidden', !show);
+        }
+    }
+
+    showExportLoading(show) {
+        const exportBtn = document.getElementById('exportStatsBtn');
+        if (exportBtn) {
+            const icon = exportBtn.querySelector('i');
+            
+            if (show) {
+                exportBtn.disabled = true;
+                icon.className = 'fas fa-spinner fa-spin';
+                exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+            } else {
+                exportBtn.disabled = false;
+                icon.className = 'fas fa-download';
+                exportBtn.innerHTML = '<i class="fas fa-download"></i> Export Excel';
+            }
+        }
+    }
+
+    // Toast notification function
+    showToast(title, message, type = 'info', duration = 5000) {
+        const container = document.getElementById('toastContainer');
+        if (!container) {
+            console.log('Toast:', title, '-', message);
+            return;
+        }
+
+        const toastId = 'toast-' + Date.now();
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.id = toastId;
+        
+        const icons = {
+            success: '✅',
+            error: '❌', 
+            warning: '⚠️',
+            info: 'ℹ️'
+        };
+
+        toast.innerHTML = `
+            <div class="toast-content">
+                <div class="toast-icon">${icons[type] || icons.info}</div>
+                <div class="toast-message">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-text">${message}</div>
+                </div>
+                <button class="toast-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+            </div>
+            <div class="toast-progress ${type}"></div>
+        `;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            if (document.getElementById(toastId)) {
+                document.getElementById(toastId).remove();
+            }
+        }, duration);
+    }
+}
+
+// Initialize dashboard when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing dashboard...');
+    new DashboardManager();
+});
+
+// Also try immediate execution in case DOM is already loaded
+if (document.readyState === 'loading') {
+    console.log('Waiting for DOM...');
+} else {
+    console.log('DOM already loaded, initializing dashboard immediately...');
+    new DashboardManager();
 }
 ```
 

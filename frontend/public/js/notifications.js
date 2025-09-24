@@ -22,13 +22,11 @@ class NotificationManager {
     }
 
     createNotificationBadge() {
-        // Create notification badge (red dot with number)
         this.badge = document.createElement('span');
         this.badge.className = 'notification-badge hidden';
         this.badge.id = 'notificationBadge';
         this.notificationIcon.appendChild(this.badge);
         
-        // Add CSS for badge (inject into head)
         const style = document.createElement('style');
         style.textContent = `
             .notification-icon {
@@ -195,13 +193,11 @@ class NotificationManager {
     }
 
     bindEvents() {
-        // Toggle dropdown
         this.notificationIcon.addEventListener('click', (e) => {
             e.stopPropagation();
             this.toggleDropdown();
         });
         
-        // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
             if (!this.notificationIcon.contains(e.target) && 
                 !this.notificationDropdown.contains(e.target)) {
@@ -209,7 +205,6 @@ class NotificationManager {
             }
         });
         
-        // See All button
         this.seeAllBtn.addEventListener('click', () => {
               this.markAllAsRead();
         });
@@ -221,10 +216,8 @@ class NotificationManager {
         
         console.log(`📱 Initializing notifications for user ${userId}`);
         
-        // Load initial notifications
         await this.loadNotifications();
         
-        // Set up periodic refresh (every 30 seconds)
         this.startPeriodicRefresh();
     }
 
@@ -292,7 +285,7 @@ class NotificationManager {
         }
 
         this.notificationList.innerHTML = this.notifications
-            .slice(0, 10) // Show only latest 10
+            .slice(0, 10) 
             .map(notification => this.createNotificationHTML(notification))
             .join('');
 
@@ -345,7 +338,6 @@ class NotificationManager {
             const data = await response.json();
             
             if (data.success) {
-                // Update local state
                 const notification = this.notifications.find(n => n.NotificationID == notificationId);
                 if (notification && !notification.IsRead) {
                     notification.IsRead = true;
@@ -382,7 +374,6 @@ class NotificationManager {
             const data = await response.json();
             
             if (data.success) {
-                // Update local state
                 this.notifications.forEach(notification => {
                     if (!notification.IsRead) {
                         notification.IsRead = true;
@@ -396,7 +387,6 @@ class NotificationManager {
                 this.updateUI();
                 this.closeDropdown();
                 
-                // Show success message
                 this.showToast('All notifications marked as read', 'success');
             }
 
@@ -419,7 +409,6 @@ class NotificationManager {
     openDropdown() {
         this.notificationDropdown.classList.remove('hidden');
         
-        // Refresh notifications when opening
         this.loadNotifications();
     }
 
@@ -428,7 +417,6 @@ class NotificationManager {
     }
 
     startPeriodicRefresh() {
-        // Refresh every 30 seconds
         setInterval(() => {
             if (this.userId) {
                 this.loadNotifications();
@@ -437,7 +425,6 @@ class NotificationManager {
     }
 
     showToast(message, type = 'info') {
-        // Create toast notification
         const toast = document.createElement('div');
         toast.className = `notification-toast notification-toast-${type}`;
         toast.innerHTML = `
@@ -445,7 +432,6 @@ class NotificationManager {
             <span>${message}</span>
         `;
         
-        // Add toast styles
         const style = document.createElement('style');
         style.textContent = `
             .notification-toast {
@@ -480,7 +466,6 @@ class NotificationManager {
         
         document.body.appendChild(toast);
         
-        // Remove after 3 seconds
         setTimeout(() => {
             toast.style.animation = 'slideInRight 0.3s ease-out reverse';
             setTimeout(() => {
@@ -491,7 +476,6 @@ class NotificationManager {
         }, 3000);
     }
 
-    // Utility functions
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -511,8 +495,5 @@ class NotificationManager {
     }
 }
 
-// Initialize notification manager globally
 window.notificationManager = new NotificationManager();
-
-// Export for ES6 modules
 export { NotificationManager };

@@ -12,6 +12,9 @@ import { dirname } from 'path';
 import notificationRoutes from './routes/notificationRoutes.js';
 import { startNotificationCleanup } from './services/notificationCleanup.js';
 import statsRoutes from './routes/statsRoutes.js';
+import grammarRoutes from './routes/grammar.js'; 
+import userRoutes from './routes/userRoutes.js'; 
+import usageRoutes from './routes/usageRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -74,14 +77,14 @@ app.use(cors());
 app.use(compression());
 
 // ✅ FIX: Admin-specific CSP configuration BEFORE general helmet
-app.use(['/admin.html', '/admin', '/pages/admin.html', '/pages/admin'], (req, res, next) => {
+app.use(['/admin.html', '/admin-dashboard.html', '/admin*'], (req, res, next) => {
     console.log('🔓 Setting permissive CSP for admin route:', req.path);
     
     // Set very permissive CSP for admin pages only
     res.setHeader('Content-Security-Policy', 
         "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob: ws: wss:; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; " +
-        "script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob: https://cdnjs.cloudflare.com; " +
+        "script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob: https://cdnjs.cloudflare.com; " +
         "style-src 'self' 'unsafe-inline' https: data:; " +
         "font-src 'self' https: data:; " +
         "img-src 'self' https: data: blob:; " +
@@ -89,24 +92,30 @@ app.use(['/admin.html', '/admin', '/pages/admin.html', '/pages/admin'], (req, re
         "object-src 'none'; " +
         "base-uri 'self';"
     );
-    
     next();
 });
 
 // ✅ FIX: General helmet configuration for other routes
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https:"],
-            fontSrc: ["'self'", "https:", "data:"],
-            imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'"],
+app.use((req, res, next) => {
+    if (req.path.includes('admin')) {
+        // Skip helmet CSP for admin pages
+        return next();
+    }
+    
+    helmet({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", "'unsafe-inline'"],
+                styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+                fontSrc: ["'self'", "https:", "data:"],
+                imgSrc: ["'self'", "data:", "https:"],
+                connectSrc: ["'self'"],
+            },
         },
-    },
-    crossOriginEmbedderPolicy: false, // Fix for some issues
-}));
+        crossOriginEmbedderPolicy: false,
+    })(req, res, next);
+});
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
@@ -139,14 +148,14 @@ app.get('/', (req, res) => {
 });
 
 // Routes
-import grammarRoutes from './routes/grammar.js'; 
 app.use('/api/grammar', grammarRoutes); 
 
-import userRoutes from './routes/userRoutes.js'; 
 app.use('/api/users', userRoutes);
 
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/stats', statsRoutes);
+
+app.use('/api/usage', usageRoutes);
 
 app.get('/health', (req, res) => {
     res.json({ 
