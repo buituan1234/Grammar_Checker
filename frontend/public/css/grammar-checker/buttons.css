@@ -120,3 +120,104 @@
   padding: 4px 8px !important;
   font-weight: normal !important;
 }
+
+/* Language Detection Display */
+.detected-language-display {
+  margin-bottom: 15px;
+  padding: 12px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 10px;
+  border-left: 4px solid #3b82f6;
+  animation: slideDown 0.3s ease;
+}
+
+.detected-language-display.hidden {
+  display: none;
+}
+
+.detection-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  flex-wrap: wrap;
+}
+
+.detection-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.detection-language {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 15px;
+}
+
+.detection-confidence {
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.detection-confidence.high {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.detection-confidence.medium {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+.detection-confidence.low {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.detection-reliable {
+  font-size: 16px;
+}
+
+.detection-reliable.reliable {
+  color: #10b981;
+}
+
+.detection-reliable.unreliable {
+  color: #f59e0b;
+}
+
+.detection-source {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Suggestion Source Badge */
+.suggestion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.suggestion-source {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: #f1f5f9;
+  color: #475569;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

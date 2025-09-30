@@ -421,7 +421,7 @@ class NotificationManager {
             if (this.userId) {
                 this.loadNotifications();
             }
-        }, 30000);
+        }, 300000);
     }
 
     showToast(message, type = 'info') {

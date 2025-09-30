@@ -132,6 +132,7 @@ Grammar_Checker/
 ├── node_modules/
 ├── .env
 ├── .gitignore
+├── README.md
 ├── package-lock.json
 ├── package.json
 └── source_dump.txt
@@ -979,7 +980,6 @@ export default router;
 ```js
 // backend/routes/statsRoutes.js
 import express from 'express';
-import sql from 'mssql';
 
 const router = express.Router();
 
@@ -1045,234 +1045,203 @@ router.get('/account-types', isAdmin, async (req, res) => {
 
 // GET /api/stats/languages - Language usage statistics
 router.get('/languages', isAdmin, async (req, res) => {
-    try {
-        const pool = getDbPool(req);
-        
-        // Note: This assumes you have a GrammarChecks table or similar
-        // If not, we'll create mock data for now
-        const result = await pool.request().query(`
-            SELECT 
-                'en-US' as language, 'English (US)' as language_name, 450 as usage_count
-            UNION ALL
-            SELECT 'vi' as language, 'Vietnamese' as language_name, 120 as usage_count
-            UNION ALL
-            SELECT 'fr' as language, 'French' as language_name, 80 as usage_count
-            UNION ALL
-            SELECT 'de' as language, 'German' as language_name, 65 as usage_count
-            UNION ALL
-            SELECT 'es' as language, 'Spanish' as language_name, 55 as usage_count
-            UNION ALL
-            SELECT 'ja-JP' as language, 'Japanese' as language_name, 30 as usage_count
-            ORDER BY usage_count DESC
-        `);
+  try {
+    const pool = getDbPool(req);
 
-        const totalUsage = result.recordset.reduce((sum, item) => sum + item.usage_count, 0);
-        
-        const stats = {
-            total_usage: totalUsage,
-            most_used: result.recordset[0],
-            least_used: result.recordset[result.recordset.length - 1],
-            languages: result.recordset.map(item => ({
-                language: item.language,
-                language_name: item.language_name,
-                usage_count: item.usage_count,
-                percentage: ((item.usage_count / totalUsage) * 100).toFixed(2)
-            }))
-        };
+    // Thống kê số lần sử dụng theo ngôn ngữ từ bảng UsageLogs
+    const result = await pool.request().query(`
+      SELECT 
+        ISNULL(Language, 'unknown') AS language,
+        COUNT(*) AS usage_count
+      FROM UsageLogs
+      WHERE Action = 'grammar_check'
+      GROUP BY ISNULL(Language, 'unknown')
+      ORDER BY usage_count DESC;
+    `);
 
-        res.json({
-            success: true,
-            data: stats
-        });
-
-    } catch (err) {
-        console.error('Error fetching language stats:', err);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error fetching language statistics.'
-        });
+    if (!result.recordset || result.recordset.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          total_usage: 0,
+          most_used: null,
+          least_used: null,
+          languages: []
+        }
+      });
     }
+
+    // Bản đồ ngôn ngữ -> tên hiển thị
+    const languageMap = {
+      'en-US': 'English (US)',
+      'vi': 'Vietnamese',
+      'fr': 'French',
+      'de': 'German',
+      'es': 'Spanish',
+      'ja-JP': 'Japanese',
+      'unknown': 'Unknown'
+    };
+
+    const totalUsage = result.recordset.reduce((sum, item) => sum + item.usage_count, 0);
+
+    const stats = {
+      total_usage: totalUsage,
+      most_used: {
+        ...result.recordset[0],
+        language_name: languageMap[result.recordset[0].language] || result.recordset[0].language
+      },
+      least_used: {
+        ...result.recordset[result.recordset.length - 1],
+        language_name: languageMap[result.recordset[result.recordset.length - 1].language] || result.recordset[result.recordset.length - 1].language
+      },
+      languages: result.recordset.map(item => ({
+        language: item.language,
+        language_name: languageMap[item.language] || item.language,
+        usage_count: item.usage_count,
+        percentage: ((item.usage_count / totalUsage) * 100).toFixed(2)
+      }))
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+
+  } catch (err) {
+    console.error('Error fetching language stats:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error fetching language statistics: ' + err.message
+    });
+  }
 });
 
-// GET /api/stats/timeframe?range=hour|day|month|year - Traffic statistics
+// GET /api/stats/timeframe?range=hour|day|month|year&action=login
 router.get('/timeframe', isAdmin, async (req, res) => {
-    try {
-        const { range = 'day', action } = req.query; 
-        const pool = getDbPool(req);
-        
-        console.log('Timeframe request:', { range, action }); 
-        
-        let query = '';
-        
-        // Validate range parameter
-        if (!['hour', 'day', 'month', 'year'].includes(range)) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid range. Use: hour, day, month, or year'
-            });
-        }
-        
-        // If action is grammar_check, try to use UsageLogs table if it exists
-        if (action === 'grammar_check') {
-            try {
-                // Test if UsageLogs table exists
-                await pool.request().query("SELECT TOP 1 * FROM UsageLogs WHERE 1=0");
-                
-                // UsageLogs exists, use it for grammar check data
-                switch (range) {
-                    case 'hour':
-                        query = `
-                            SELECT 
-                                DATEPART(HOUR, created_at) as period,
-                                'Hour ' + CAST(DATEPART(HOUR, created_at) AS VARCHAR(2)) as period_label,
-                                COUNT(*) as activity_count
-                            FROM UsageLogs 
-                            WHERE action = 'grammar_check'
-                            AND created_at >= DATEADD(day, -1, GETDATE())
-                            GROUP BY DATEPART(HOUR, created_at)
-                            ORDER BY period
-                        `;
-                        break;
-                        
-                    case 'day':
-                        query = `
-                            SELECT 
-                                CAST(created_at AS DATE) as period,
-                                FORMAT(created_at, 'MMM dd') as period_label,
-                                COUNT(*) as activity_count
-                            FROM UsageLogs 
-                            WHERE action = 'grammar_check'
-                            AND created_at >= DATEADD(day, -30, GETDATE())
-                            GROUP BY CAST(created_at AS DATE)
-                            ORDER BY period
-                        `;
-                        break;
-                        
-                    case 'month':
-                        query = `
-                            SELECT 
-                                YEAR(created_at) * 100 + MONTH(created_at) as period,
-                                FORMAT(created_at, 'MMM yyyy') as period_label,
-                                COUNT(*) as activity_count
-                            FROM UsageLogs 
-                            WHERE action = 'grammar_check'
-                            AND created_at >= DATEADD(month, -12, GETDATE())
-                            GROUP BY YEAR(created_at), MONTH(created_at)
-                            ORDER BY period
-                        `;
-                        break;
-                        
-                    case 'year':
-                        query = `
-                            SELECT 
-                                YEAR(created_at) as period,
-                                CAST(YEAR(created_at) AS VARCHAR(4)) as period_label,
-                                COUNT(*) as activity_count
-                            FROM UsageLogs 
-                            WHERE action = 'grammar_check'
-                            GROUP BY YEAR(created_at)
-                            ORDER BY period
-                        `;
-                        break;
-                }
-                
-                const result = await pool.request().query(query);
-                
-                if (result.recordset && result.recordset.length > 0) {
-                    const stats = {
-                        range: range,
-                        total_activity: result.recordset.reduce((sum, item) => sum + item.activity_count, 0),
-                        data: result.recordset.map(item => ({
-                            period: item.period_label,
-                            count: item.activity_count
-                        }))
-                    };
+  try {
+    const { range = 'day', action } = req.query;
+    const pool = getDbPool(req);
 
-                    return res.json({
-                        success: true,
-                        data: stats
-                    });
-                }
-                
-            } catch (usageLogsError) {
-                console.log('UsageLogs not available or no data, falling back to mock data:', usageLogsError.message);
-            }
-        }
-        
-        // Fallback: Generate mock data based on Users table or create sample data
-        console.log('Generating mock timeframe data for range:', range);
-        
-        let mockData = [];
-        const now = new Date();
-        
-        switch (range) {
-            case 'hour':
-                for (let i = 23; i >= 0; i--) {
-                    const hour = (now.getHours() - i + 24) % 24;
-                    mockData.push({
-                        period_label: `Hour ${hour}`,
-                        activity_count: Math.floor(Math.random() * 20) + 5
-                    });
-                }
-                break;
-                
-            case 'day':
-                for (let i = 29; i >= 0; i--) {
-                    const date = new Date(now);
-                    date.setDate(date.getDate() - i);
-                    mockData.push({
-                        period_label: date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }),
-                        activity_count: Math.floor(Math.random() * 50) + 10
-                    });
-                }
-                break;
-                
-            case 'month':
-                for (let i = 11; i >= 0; i--) {
-                    const date = new Date(now);
-                    date.setMonth(date.getMonth() - i);
-                    mockData.push({
-                        period_label: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-                        activity_count: Math.floor(Math.random() * 500) + 100
-                    });
-                }
-                break;
-                
-            case 'year':
-                const currentYear = now.getFullYear();
-                for (let i = 2; i >= 0; i--) {
-                    const year = currentYear - i;
-                    mockData.push({
-                        period_label: year.toString(),
-                        activity_count: Math.floor(Math.random() * 2000) + 500
-                    });
-                }
-                break;
-        }
-        
-        const stats = {
-            range: range,
-            total_activity: mockData.reduce((sum, item) => sum + item.activity_count, 0),
-            data: mockData.map(item => ({
-                period: item.period_label,
-                count: item.activity_count
-            }))
-        };
-
-        res.json({
-            success: true,
-            data: stats
-        });
-
-    } catch (err) {
-        console.error('Error fetching timeframe stats:', err);
-        console.error('Error details:', err.stack);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error fetching timeframe statistics: ' + err.message
-        });
+    if (!['hour', 'day', 'month', 'year'].includes(range)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid range. Use: hour, day, month, or year"
+      });
     }
+
+    // Nếu có action thì lọc, ví dụ action=login
+    const actionFilter = action ? `AND u.Action = '${action}'` : '';
+
+    let query = '';
+
+    switch (range) {
+      case 'hour': 
+        query = `
+          ;WITH Hours AS (
+            SELECT 0 AS h UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3
+            UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7
+            UNION ALL SELECT 8 UNION ALL SELECT 9 UNION ALL SELECT 10 UNION ALL SELECT 11
+            UNION ALL SELECT 12 UNION ALL SELECT 13 UNION ALL SELECT 14 UNION ALL SELECT 15
+            UNION ALL SELECT 16 UNION ALL SELECT 17 UNION ALL SELECT 18 UNION ALL SELECT 19
+            UNION ALL SELECT 20 UNION ALL SELECT 21 UNION ALL SELECT 22 UNION ALL SELECT 23
+          )
+          SELECT 
+            h AS period,
+            'Hour ' + CAST(h AS VARCHAR(2)) AS period_label,
+            COUNT(u.LogID) AS activity_count
+          FROM Hours h
+          LEFT JOIN UsageLogs u
+            ON DATEPART(HOUR, u.CreatedAt) = h.h
+           AND u.CreatedAt >= DATEADD(day, -1, GETDATE())
+           ${actionFilter}
+          GROUP BY h
+          ORDER BY h;
+        `;
+        break;
+
+      case 'day': 
+        query = `
+          ;WITH Days AS (
+            SELECT CAST(GETDATE() AS DATE) AS d
+            UNION ALL
+            SELECT DATEADD(DAY, -1, d) FROM Days WHERE d > DATEADD(DAY, -29, GETDATE())
+          )
+          SELECT 
+            d AS period,
+            FORMAT(d, 'MMM dd') AS period_label,
+            COUNT(u.LogID) AS activity_count
+          FROM Days
+          LEFT JOIN UsageLogs u
+            ON CAST(u.CreatedAt AS DATE) = d
+           ${actionFilter}
+          GROUP BY d
+          ORDER BY d;
+        `;
+        break;
+
+      case 'month': 
+        query = `
+          ;WITH Months AS (
+            SELECT DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1) AS m
+            UNION ALL
+            SELECT DATEADD(MONTH, -1, m) FROM Months WHERE m > DATEADD(MONTH, -11, GETDATE())
+          )
+          SELECT 
+            YEAR(m) * 100 + MONTH(m) AS period,
+            FORMAT(m, 'MMM yyyy') AS period_label,
+            COUNT(u.LogID) AS activity_count
+          FROM Months
+          LEFT JOIN UsageLogs u
+            ON YEAR(u.CreatedAt) = YEAR(m) 
+           AND MONTH(u.CreatedAt) = MONTH(m)
+           ${actionFilter}
+          GROUP BY m
+          ORDER BY m;
+        `;
+        break;
+
+      case 'year': 
+        query = `
+          ;WITH Years AS (
+            SELECT YEAR(GETDATE()) AS y
+            UNION ALL
+            SELECT y - 1 FROM Years WHERE y > YEAR(GETDATE()) - 4
+          )
+          SELECT 
+            y AS period,
+            CAST(y AS VARCHAR(4)) AS period_label,
+            COUNT(u.LogID) AS activity_count
+          FROM Years
+          LEFT JOIN UsageLogs u
+            ON YEAR(u.CreatedAt) = y
+           ${actionFilter}
+          GROUP BY y
+          ORDER BY y;
+        `;
+        break;
+    }
+
+    const result = await pool.request().query(query);
+
+    const stats = {
+      range,
+      total_activity: result.recordset.reduce((sum, item) => sum + item.activity_count, 0),
+      data: result.recordset.map(item => ({
+        period: item.period_label,
+        count: item.activity_count
+      }))
+    };
+
+    res.json({ success: true, data: stats });
+  } catch (err) {
+    console.error('Error fetching timeframe stats:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error fetching timeframe statistics: ' + err.message
+    });
+  }
 });
+
 
 // GET /api/stats/overview - Dashboard overview stats
 router.get('/overview', isAdmin, async (req, res) => {
@@ -1405,57 +1374,62 @@ const router = express.Router();
 
 // POST /api/usage/log - Log user activity
 router.post('/log', async (req, res) => {
-    try {
-        const pool = req.app.locals.db;
-        if (!pool) {
-            return res.status(500).json({ 
-                success: false, 
-                error: 'Database not available' 
-            });
-        }
-
-        const {
-            user_id,
-            username,
-            action,
-            user_agent,
-            session_id,
-            metadata
-        } = req.body;
-
-        // Get client IP
-        const ip_address = req.ip || 
-                          req.connection.remoteAddress || 
-                          req.socket.remoteAddress ||
-                          (req.connection.socket ? req.connection.socket.remoteAddress : null);
-
-        await pool.request()
-            .input('user_id', sql.Int, user_id)
-            .input('username', sql.NVarChar, username || 'anonymous')
-            .input('action', sql.NVarChar, action)
-            .input('ip_address', sql.NVarChar, ip_address)
-            .input('user_agent', sql.NVarChar, user_agent)
-            .input('session_id', sql.NVarChar, session_id)
-            .input('metadata', sql.NVarChar, metadata || '{}')
-            .query(`
-                INSERT INTO UsageLogs 
-                (user_id, username, action, ip_address, user_agent, session_id, metadata, created_at)
-                VALUES 
-                (@user_id, @username, @action, @ip_address, @user_agent, @session_id, @metadata, GETDATE())
-            `);
-
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error('Error logging usage:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Failed to log usage' 
-        });
+  try {
+    const pool = req.app.locals.db;
+    if (!pool) {
+      console.error('Usage log: DB pool not available', { headers: req.headers, body: req.body });
+      return res.status(503).json({ success: false, error: 'Database not available' });
     }
+
+    console.log('Usage log request body:', req.body);
+    console.log('Usage log request headers:', {
+      'x-user-id': req.headers['x-user-id'],
+      'x-user-role': req.headers['x-user-role'],
+      ua: req.headers['user-agent'],
+    });
+
+    const rawUserId = req.body?.user_id ?? req.body?.UserID ?? req.body?.user?.id ?? req.headers['x-user-id'] ?? null;
+    const UserID = rawUserId ? parseInt(rawUserId, 10) : null;
+
+    const action = (req.body?.action ?? '').toString().trim();
+    if (!action) {
+      return res.status(400).json({ success: false, error: 'Missing action in request body' });
+    }
+
+    const language = req.body?.language ?? req.body?.lang ?? null;
+    const detailsObj = req.body?.metadata ?? req.body?.details ?? req.body?.message ?? {};
+    const Details = (typeof detailsObj === 'string') ? detailsObj : JSON.stringify(detailsObj);
+
+    // IP detection with x-forwarded-for fallback
+    const ipHeader = req.headers['x-forwarded-for'] || '';
+    const ipFromHeader = ipHeader.split(',').map(s => s.trim()).find(Boolean) || null;
+    const IPAddress = (ipFromHeader || req.ip || req.socket?.remoteAddress || '').toString();
+
+    const UserAgent = (req.headers['user-agent'] || req.body?.user_agent || '').toString();
+
+    await pool.request()
+      .input('UserID', sql.Int, UserID)
+      .input('Action', sql.VarChar(255), action)
+      .input('Language', sql.VarChar(50), language)
+      .input('Details', sql.NVarChar(sql.MAX), Details)
+      .input('IPAddress', sql.VarChar(100), IPAddress)
+      .input('UserAgent', sql.NVarChar(sql.MAX), UserAgent)
+      .query(`
+        INSERT INTO UsageLogs 
+          (UserID, Action, Language, Details, IPAddress, UserAgent, CreatedAt)
+        VALUES 
+          (@UserID, @Action, @Language, @Details, @IPAddress, @UserAgent, GETDATE())
+      `);
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Error logging usage:', error.stack || error);
+    return res.status(500).json({ success: false, error: 'Failed to log usage', detail: error?.message });
+  }
 });
 
 export default router;
+
 ```
 
 ### backend\routes\userRoutes.js
@@ -2374,8 +2348,8 @@ export function startNotificationCleanup(dbPool) {
             console.error('Error during automatic notification cleanup:', error);
         }
     }, {
-        scheduled: false, // Don't start immediately
-        timezone: "Asia/Ho_Chi_Minh" // Set to Vietnam timezone
+        scheduled: false, 
+        timezone: "Asia/Ho_Chi_Minh" 
     });
 
     // Start the scheduled job
@@ -2397,7 +2371,7 @@ export function startNotificationCleanup(dbPool) {
         } catch (error) {
             console.error('Error during initial cleanup:', error);
         }
-    }, 5000); // Run after 5 seconds of server startup
+    }, 5000); 
 
     return cleanupJob;
 }
@@ -2515,7 +2489,17 @@ function getUserData() {
 
 export async function logUsageActivity(data) {
     try {
-        const userData = getUserData();
+        const userData = getUserData(); 
+        const payload = {
+          user_id: userData?.userId ?? userData?.id ?? null,
+          username: userData?.username ?? userData?.name ?? null,
+          action: data.action || null,
+          language: data.language || null,   // thêm dòng này
+          metadata: data.details ?? data.metadata ?? {},
+          user_agent: navigator.userAgent || '',
+          session_id: sessionStorage.getItem('sessionId') || ''
+        };
+
         await fetch('/api/usage/log', {
             method: 'POST',
             headers: {
@@ -2523,13 +2507,13 @@ export async function logUsageActivity(data) {
                 'x-user-id': userData?.userId?.toString() || '',
                 'x-user-role': userData?.userRole || 'guest'
             },
-            body: JSON.stringify(data)
+            body: JSON.stringify(payload)
         });
     } catch (error) {
         console.error('Error logging usage:', error);
-        // Don't throw error to avoid breaking user experience
     }
 }
+
 
 async function safeJson(response) {
   try {
@@ -3158,7 +3142,7 @@ function getLoggedInUser() {
       if (loggedInUser?.userId) {
         await logUsageActivity({
           action: 'grammar_check',
-          language: lang,
+          language: detectedLang, 
           details: {
             text_length: text.length,
             errors_found: matches.length,
@@ -3305,13 +3289,11 @@ document.addEventListener("DOMContentLoaded", () => {
         clearError(confirmPasswordError);
         clearError(phoneError);
         clearError(emailError);
-        // ✅ ADDED: Clear fullName error
         clearError(fullNameError);
         clearError(registerSuccess);
         clearError(registerGeneralError);
     }
 
-    // Enhanced validation with better UX
     function validateForm() {
         let isValid = true;
         let firstErrorField = null;
@@ -3364,7 +3346,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // Focus first error field
         if (firstErrorField) {
             firstErrorField.focus();
         }
@@ -3373,7 +3354,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Enhanced real-time validation
-    // ✅ ADDED: Full Name real-time validation
     fullNameInput?.addEventListener('input', () => {
         if (fullNameInput.value.trim().length >= 2) {
             clearError(fullNameError);
@@ -3390,7 +3370,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (passwordInput.value.length >= 6) {
             clearError(passwordError);
         }
-        // Also check confirm password if it has value
         if (confirmPasswordInput.value && passwordInput.value === confirmPasswordInput.value) {
             clearError(confirmPasswordError);
         }
@@ -3416,22 +3395,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Enhanced toggle password functionality
     document.querySelectorAll('.toggle-password').forEach(btn => {
         btn.addEventListener('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
-            togglePassword(this.querySelector('i')); // iconElement
+            togglePassword(this.querySelector('i')); 
         });
     });
 
-    // Enhanced form submission
     registerForm?.addEventListener("submit", async function(e) {
         e.preventDefault();
         clearMessages();
 
         if (validateForm()) {
-            // ✅ FIXED: Get all required field values including fullName
             const fullName = fullNameInput.value.trim();
             const username = usernameInput.value.trim();
             const password = passwordInput.value;
@@ -3439,10 +3415,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const phone = phoneInput.value.trim();
 
             try {
-                // Show loading state
                 toggleSubmitButton(true);
 
-                // ✅ FIXED: Include fullName in the data object
                 const data = await registerUser({ fullName, username, password, email, phone });
 
                 if (data.success) {
@@ -3452,7 +3426,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     const params = new URLSearchParams(window.location.search);
                     const redirectTo = params.get('redirect');
 
-                    // Add exit animation
                     setTimeout(() => {
                         const authContainer = document.querySelector('.auth-container');
                         if (authContainer) {
@@ -3462,7 +3435,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         }
                     }, 1000);
 
-                    // Redirect after animation
                     setTimeout(() => {
                         if (redirectTo) {
                             window.location.href = redirectTo;
@@ -3481,7 +3453,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 showCustomAlert(errorMsg, 'error');
                 displayError(registerGeneralError, errorMsg);
             } finally {
-                // Hide loading state
                 toggleSubmitButton(false);
             }
         } else {
@@ -3489,7 +3460,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Enhanced page animations
     const animationParams = new URLSearchParams(window.location.search);
     if (animationParams.get("animate") === "right") {
         const authContainer = document.querySelector('.auth-container');
@@ -3498,7 +3468,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Enhanced page transition effects
     const switchFormLinks = document.querySelectorAll('.switch-form-link');
     switchFormLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -3506,7 +3475,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const href = link.getAttribute('href');
             
             if (href) {
-                // Add exit animation
                 const authContainer = document.querySelector('.auth-container');
                 if (authContainer) {
                     authContainer.style.transform = 'translateX(-100px)';
@@ -3514,7 +3482,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     authContainer.style.transition = 'all 0.3s ease-out';
                 }
                 
-                // Navigate after animation
                 setTimeout(() => {
                     window.location.href = href;
                 }, 300);
@@ -3528,7 +3495,6 @@ document.addEventListener("DOMContentLoaded", () => {
         backArrowBtn.addEventListener('click', (e) => {
             e.preventDefault();
             
-            // Add exit animation
             const authContainer = document.querySelector('.auth-container');
             if (authContainer) {
                 authContainer.style.transform = 'scale(0.95)';
@@ -3536,17 +3502,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 authContainer.style.transition = 'all 0.3s ease-out';
             }
             
-            // Navigate after animation
             setTimeout(() => {
                 window.location.href = backArrowBtn.href;
             }, 300);
         });
     }
 
-    // Enhanced keyboard navigation
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            // Clear any active states
             document.activeElement?.blur();
             clearMessages();
         }
@@ -3559,7 +3522,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ✅ UPDATED: Auto-focus first empty input (including fullName)
     setTimeout(() => {
         if (!fullNameInput?.value) {
             fullNameInput?.focus();
@@ -3574,14 +3536,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 100);
 
-    // Enhanced form reset functionality
     function resetForm() {
         registerForm?.reset();
         clearMessages();
-        fullNameInput?.focus(); // ✅ UPDATED: Focus fullName first
+        fullNameInput?.focus(); 
     }
 
-    // Add reset functionality if needed
     const resetBtn = document.querySelector('.reset-btn');
     if (resetBtn) {
         resetBtn.addEventListener('click', (e) => {
@@ -3623,7 +3583,7 @@ function displayError(elementId, message) {
     const element = document.getElementById(elementId);
     if (element) {
         element.textContent = message;
-        element.style.color = '#ef4444'; // Use CSS variable color
+        element.style.color = '#ef4444'; 
         element.style.display = 'block';
     }
 }
@@ -3640,7 +3600,7 @@ function displaySuccess(elementId, message) {
     const element = document.getElementById(elementId);
     if (element) {
         element.textContent = message;
-        element.style.color = '#10b981'; // Use CSS variable color
+        element.style.color = '#10b981'; 
         element.style.display = 'block';
     }
 }
@@ -3697,7 +3657,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Enhanced animation for page transition
     const animateParam = urlParams.get('animate');
     if (animateParam === 'left') {
-        // Updated to use new container class
         const authContainer = document.querySelector('.auth-container');
         if (authContainer) {
             authContainer.classList.add('slide-in-left');
@@ -3726,7 +3685,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!password) {
             displayError('loginGeneralError', 'Password is required.');
-            if (isValid) passwordInput?.focus(); // Only focus if no previous errors
+            if (isValid) passwordInput?.focus(); 
             isValid = false;
         } else if (password.length < 6) {
             displayError('loginGeneralError', 'Password must be at least 6 characters.');
@@ -3755,11 +3714,9 @@ document.addEventListener('DOMContentLoaded', () => {
         loginForm.addEventListener('submit', async (event) => {
             event.preventDefault();
 
-            // Clear previous messages
             clearError('loginGeneralError');
             clearError('loginSuccess');
 
-            // Validate form
             if (!validateLoginForm()) {
                 return;
             }
@@ -3768,7 +3725,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = passwordInput.value;
 
             try {
-                // Show loading state
                 toggleSubmitButton(true);
                 
                 const response = await loginUser(username, password);
@@ -3783,7 +3739,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         userRole: response.userRole
                     };
 
-                    // Store user data
                     const storageKey = userToStore.userRole === 'admin' ? 'loggedInAs_admin' : 'loggedInAs_user';
                     localStorage.setItem(storageKey, JSON.stringify(userToStore));
 
@@ -3795,15 +3750,12 @@ document.addEventListener('DOMContentLoaded', () => {
                      user_role: userToStore.userRole 
                     }
                     });
-                    // Show success message
                     showCustomAlert("Login successful! Redirecting...", 'success');
                     displaySuccess('loginSuccess', 'Login successful! Redirecting...');
 
-                    // Determine redirect URL
                     const redirectTo = urlParams.get('redirect') ||
                         (userToStore.userRole === 'admin' ? '/admin.html' : '/GrammarChecker1.html');
 
-                    // Add exit animation
                     setTimeout(() => {
                         const authContainer = document.querySelector('.auth-container');
                         if (authContainer) {
@@ -3813,7 +3765,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }, 1000);
 
-                    // Redirect after animation
                     setTimeout(() => {
                         window.location.href = redirectTo;
                     }, 1500);
@@ -3829,13 +3780,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 showCustomAlert(errorMsg, 'error');
                 displayError('loginGeneralError', errorMsg);
             } finally {
-                // Hide loading state
                 toggleSubmitButton(false);
             }
         });
     }
 
-    // Enhanced social login buttons (if they exist)
     document.querySelectorAll('.social-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -3844,7 +3793,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Enhanced page transition effects
     const switchFormLinks = document.querySelectorAll('.switch-form-link');
     switchFormLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -3852,7 +3800,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const href = link.getAttribute('href');
             
             if (href) {
-                // Add exit animation
                 const authContainer = document.querySelector('.auth-container');
                 if (authContainer) {
                     authContainer.style.transform = 'translateX(100px)';
@@ -3860,7 +3807,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     authContainer.style.transition = 'all 0.3s ease-out';
                 }
                 
-                // Navigate after animation
                 setTimeout(() => {
                     window.location.href = href;
                 }, 300);
@@ -3868,10 +3814,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // Enhanced keyboard navigation
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            // Clear any active states
             document.activeElement?.blur();
             clearError('loginGeneralError');
         }
@@ -3884,7 +3828,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Auto-focus first empty input
     setTimeout(() => {
         if (!usernameInput?.value) {
             usernameInput?.focus();
@@ -3921,13 +3864,11 @@ class NotificationManager {
     }
 
     createNotificationBadge() {
-        // Create notification badge (red dot with number)
         this.badge = document.createElement('span');
         this.badge.className = 'notification-badge hidden';
         this.badge.id = 'notificationBadge';
         this.notificationIcon.appendChild(this.badge);
         
-        // Add CSS for badge (inject into head)
         const style = document.createElement('style');
         style.textContent = `
             .notification-icon {
@@ -4094,13 +4035,11 @@ class NotificationManager {
     }
 
     bindEvents() {
-        // Toggle dropdown
         this.notificationIcon.addEventListener('click', (e) => {
             e.stopPropagation();
             this.toggleDropdown();
         });
         
-        // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
             if (!this.notificationIcon.contains(e.target) && 
                 !this.notificationDropdown.contains(e.target)) {
@@ -4108,7 +4047,6 @@ class NotificationManager {
             }
         });
         
-        // See All button
         this.seeAllBtn.addEventListener('click', () => {
               this.markAllAsRead();
         });
@@ -4120,10 +4058,8 @@ class NotificationManager {
         
         console.log(`📱 Initializing notifications for user ${userId}`);
         
-        // Load initial notifications
         await this.loadNotifications();
         
-        // Set up periodic refresh (every 30 seconds)
         this.startPeriodicRefresh();
     }
 
@@ -4191,7 +4127,7 @@ class NotificationManager {
         }
 
         this.notificationList.innerHTML = this.notifications
-            .slice(0, 10) // Show only latest 10
+            .slice(0, 10) 
             .map(notification => this.createNotificationHTML(notification))
             .join('');
 
@@ -4244,7 +4180,6 @@ class NotificationManager {
             const data = await response.json();
             
             if (data.success) {
-                // Update local state
                 const notification = this.notifications.find(n => n.NotificationID == notificationId);
                 if (notification && !notification.IsRead) {
                     notification.IsRead = true;
@@ -4281,7 +4216,6 @@ class NotificationManager {
             const data = await response.json();
             
             if (data.success) {
-                // Update local state
                 this.notifications.forEach(notification => {
                     if (!notification.IsRead) {
                         notification.IsRead = true;
@@ -4295,7 +4229,6 @@ class NotificationManager {
                 this.updateUI();
                 this.closeDropdown();
                 
-                // Show success message
                 this.showToast('All notifications marked as read', 'success');
             }
 
@@ -4318,7 +4251,6 @@ class NotificationManager {
     openDropdown() {
         this.notificationDropdown.classList.remove('hidden');
         
-        // Refresh notifications when opening
         this.loadNotifications();
     }
 
@@ -4327,7 +4259,6 @@ class NotificationManager {
     }
 
     startPeriodicRefresh() {
-        // Refresh every 30 seconds
         setInterval(() => {
             if (this.userId) {
                 this.loadNotifications();
@@ -4336,7 +4267,6 @@ class NotificationManager {
     }
 
     showToast(message, type = 'info') {
-        // Create toast notification
         const toast = document.createElement('div');
         toast.className = `notification-toast notification-toast-${type}`;
         toast.innerHTML = `
@@ -4344,7 +4274,6 @@ class NotificationManager {
             <span>${message}</span>
         `;
         
-        // Add toast styles
         const style = document.createElement('style');
         style.textContent = `
             .notification-toast {
@@ -4379,7 +4308,6 @@ class NotificationManager {
         
         document.body.appendChild(toast);
         
-        // Remove after 3 seconds
         setTimeout(() => {
             toast.style.animation = 'slideInRight 0.3s ease-out reverse';
             setTimeout(() => {
@@ -4390,7 +4318,6 @@ class NotificationManager {
         }, 3000);
     }
 
-    // Utility functions
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -4410,10 +4337,7 @@ class NotificationManager {
     }
 }
 
-// Initialize notification manager globally
 window.notificationManager = new NotificationManager();
-
-// Export for ES6 modules
 export { NotificationManager };
 ```
 
@@ -4503,7 +4427,6 @@ export { SectionManager };
  * @param {number} duration 
  */
 export function showCustomAlert(message, type = 'info', duration = 3000) {
-    // Remove any existing alerts to prevent stacking
     const existingAlert = document.getElementById('customAlert');
     if (existingAlert) {
         existingAlert.remove();
@@ -4513,7 +4436,6 @@ export function showCustomAlert(message, type = 'info', duration = 3000) {
     alertDiv.id = 'customAlert';
     alertDiv.textContent = message;
 
-    // Basic styling for the alert
     alertDiv.style.position = 'fixed';
     alertDiv.style.top = '20px';
     alertDiv.style.left = '50%';
@@ -4550,11 +4472,10 @@ export function showCustomAlert(message, type = 'info', duration = 3000) {
 
     document.body.appendChild(alertDiv);
 
-    // Animate in
     setTimeout(() => {
         alertDiv.style.opacity = '1';
         alertDiv.style.transform = 'translateX(-50%) translateY(0)';
-    }, 10); // Small delay to allow CSS transition
+    }, 10); 
 
     // Animate out and remove
     setTimeout(() => {
@@ -4562,7 +4483,7 @@ export function showCustomAlert(message, type = 'info', duration = 3000) {
         alertDiv.style.transform = 'translateX(-50%) translateY(-20px)';
         setTimeout(() => {
             alertDiv.remove();
-        }, 500); // Remove after transition
+        }, 500); 
     }, duration);
 }
 
@@ -4598,7 +4519,6 @@ export function togglePassword(iconElement) {
 
 // API management functions
 const AdminAPI = {
-  // Load users from server
   async loadUsers() {
     showLoading(true);
 
@@ -4664,7 +4584,6 @@ const AdminAPI = {
 
   // Normalize user data from different API formats
   normalizeUsersData(usersData) {
-    // THÊM 3 DÒNG DEBUG NÀY
     console.log('=== DEBUG normalizeUsersData ===');
     console.log('Raw usersData:', usersData);
     console.log('First user UpdatedAt:', usersData[0]?.UpdatedAt);
@@ -4681,7 +4600,6 @@ const AdminAPI = {
         createdAt: user.CreatedAt || user.createdAt || new Date().toISOString(),
         updatedAt: user.UpdatedAt || user.updatedAt || null,
         
-        // THÊM DEBUG CHO TỪNG USER
         _debugUpdatedAt: user.UpdatedAt,
         _debugupdatedAt: user.updatedAt
     }));
@@ -4737,7 +4655,6 @@ async updateUser(userId, userData) {
   try {
     log('Starting user update', { userId, userData });
     
-    // Ensure we have admin access
     const currentAdmin = getUserData();
     if (!currentAdmin || currentAdmin.userRole !== 'admin') {
       throw new Error('Admin access required');
@@ -4756,7 +4673,6 @@ async updateUser(userId, userData) {
       fullName: userData.fullName || currentUserData.fullName
     };
     
-    // Handle status, accountType, and role explicitly
     if (userData.hasOwnProperty('status')) {
       updatePayload.status = userData.status;
     } else {
@@ -4782,7 +4698,6 @@ async updateUser(userId, userData) {
     
     log('Final update payload', updatePayload);
     
-    // Make API request
     let response;
     try {
       response = await makeAuthenticatedRequest(`${CONFIG.API_BASE_URL}/users/admin/update/${userId}`, {
@@ -4797,7 +4712,6 @@ async updateUser(userId, userData) {
     // Log response để debug
     log('API response received', response);
     
-    // Use user data from API response if available
     if (response && response.user) {
       const apiUser = response.user;
       log('API returned user data', apiUser);
@@ -4822,7 +4736,6 @@ async updateUser(userId, userData) {
       updateStatistics();
       renderUserTable();
       
-      // Track changes for notification
       const changes = [];
       if (currentUserData.status !== updatedUser.status) {
         changes.push(`Status: ${currentUserData.status} → ${updatedUser.status}`);
@@ -4845,7 +4758,6 @@ async updateUser(userId, userData) {
       return updatedUser;
       
     } else {
-      // Fallback to old method if API doesn't return user data
       const updatedUser = {
         id: Number(userId),
         username: updatePayload.username,
@@ -4856,7 +4768,7 @@ async updateUser(userId, userData) {
         accountType: updatePayload.accountType,
         status: updatePayload.status,
         createdAt: currentUserData.createdAt,
-        updatedAt: new Date().toISOString() // Fallback to local time
+        updatedAt: new Date().toISOString() 
       };
       
       // Update state and UI immediately
@@ -4864,7 +4776,6 @@ async updateUser(userId, userData) {
       updateStatistics();
       renderUserTable();
       
-      // Track changes for notification
       const changes = [];
       if (currentUserData.status !== updatedUser.status) {
         changes.push(`Status: ${currentUserData.status} → ${updatedUser.status}`);
@@ -4974,7 +4885,6 @@ if (typeof window !== 'undefined') {
 
 // Authentication management
 const AdminAuth = {
-  // Validate authentication for admin panel access
   validateAuthentication() {
     const userData = getUserData();
     
@@ -5226,7 +5136,7 @@ const CONFIG = {
   USER_STORAGE_KEY: 'loggedInAs_user', 
   LEGACY_STORAGE_KEY: 'loggedInAs',
   DEBUG_MODE: false,
-  AUTO_REFRESH_INTERVAL: 300000, // 5 minutes
+  AUTO_REFRESH_INTERVAL: 3000000, 
   NOTIFICATION_DURATION: 5000,
   SEARCH_DEBOUNCE_DELAY: 300
 };
@@ -5248,7 +5158,6 @@ if (typeof window !== 'undefined') {
 
 // Debug management functions
 const AdminDebug = {
-  // Debug authentication
   debugAuth() {
     console.log('=== Authentication Debug ===');
     console.log('Admin Storage Key:', CONFIG.ADMIN_STORAGE_KEY);
@@ -5530,14 +5439,11 @@ if (typeof window !== 'undefined') {
 
 // Event management functions
 const AdminEvents = {
-  // Initialize all event listeners
   initializeEventListeners() {
-    // Header events
     if (elements.logoutBtn) {
       elements.logoutBtn.addEventListener('click', handleLogout);
     }
     
-    // Search and refresh
     if (elements.searchInput) {
       elements.searchInput.addEventListener('input', this.handleSearch);
     }
@@ -5548,7 +5454,6 @@ const AdminEvents = {
       elements.debugBtn.addEventListener('click', toggleDebug);
     }
     
-    // Modal events
     if (elements.addUserBtn) {
       elements.addUserBtn.addEventListener('click', showAddUserModal);
     }
@@ -5559,7 +5464,6 @@ const AdminEvents = {
       elements.userForm.addEventListener('submit', handleFormSubmit);
     }
     
-    // Quick toggle modal events
     if (elements.quickToggleCancelBtn) {
       elements.quickToggleCancelBtn.addEventListener('click', hideQuickToggleModal);
     }
@@ -5585,7 +5489,6 @@ const AdminEvents = {
     elements.userTableBody.addEventListener('click', this.handleTableClick);
   },
 
-  // Handle table clicks
   handleTableClick(e) {
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -5607,7 +5510,6 @@ const AdminEvents = {
   handleSearch() {
     if (!elements.searchInput) return;
     
-    // Clear previous timeout
     if (AppState.searchTimeout) {
       clearTimeout(AppState.searchTimeout);
     }
@@ -5785,7 +5687,7 @@ setTimeout(function() {
             window.location.href = 'admin-dashboard.html';
         });
     }
-}, 1000);
+}, 300000);
 
 // Legacy wrapper functions for backward compatibility
 function initializeEventListeners() {
@@ -5825,7 +5727,6 @@ if (typeof window !== 'undefined') {
 
 // Form management functions
 const AdminForms = {
-  // Get form data from modal
   getFormData() {
     const data = {
       username: elements.username?.value?.trim() || '',
@@ -5839,7 +5740,6 @@ const AdminForms = {
     }
 
     if (AppState.isEditMode && AppState.currentEditingUserId) {
-      // In edit mode, read checkbox states
       const isActiveEl = document.getElementById('isActive');
       const isPlusEl = document.getElementById('isPlusAccount'); 
       const isAdminEl = document.getElementById('isAdmin');
@@ -5858,7 +5758,6 @@ const AdminForms = {
         editingUserId: AppState.currentEditingUserId
       });
     } else {
-      // Add mode defaults
       data.status = 'active';
       data.accountType = 'free';
       data.role = 'user';
@@ -5877,8 +5776,6 @@ const AdminForms = {
     if (elements.phone) elements.phone.value = user.phone || '';
     if (elements.fullName) elements.fullName.value = user.fullName || '';
     if (elements.password) elements.password.value = '';
-    
-    // Set checkboxes with explicit boolean values
     if (elements.isActive) {
       elements.isActive.checked = (user.status === 'active');
       log('Set isActive checkbox', { userStatus: user.status, checked: elements.isActive.checked });
@@ -6281,7 +6178,6 @@ const AdminMain = {
 
   // Setup legacy globals for backward compatibility
   setupLegacyGlobals() {
-    // Export AdminPanel object
     window.AdminPanel = {
       init: this.init.bind(this),
       loadUsers,
@@ -6411,7 +6307,6 @@ log('Admin panel main script loaded successfully', {
 
 // Modal management functions
 const AdminModals = {
-  // Show add user modal
   showAddUserModal() {
     this.resetModalState();
     
@@ -6479,7 +6374,6 @@ const AdminModals = {
     setTimeout(fixInputStyling, 100);
   },
 
-  // Reset modal state
   resetModalState() {
     AdminState.clearEditMode();
     
@@ -6680,9 +6574,7 @@ const AppState = {
 // DOM elements cache
 let elements = {};
 
-// State management functions
 const AdminState = {
-  // Users management
   setUsers(users) {
     AppState.allUsers = users;
     AppState.filteredUsers = [...users];
@@ -6764,12 +6656,10 @@ if (typeof window !== 'undefined') {
 
 // Storage management functions
 const AdminStorage = {
-  // Get storage key based on user role
   getStorageKey(userRole) {
     return userRole === 'admin' ? CONFIG.ADMIN_STORAGE_KEY : CONFIG.USER_STORAGE_KEY;
   },
 
-  // Set user data with appropriate storage key
   setUserData(userData) {
     try {
       const storageKey = this.getStorageKey(userData.userRole);
@@ -6783,7 +6673,6 @@ const AdminStorage = {
         loginTime: new Date().toISOString()
       };
       
-      // Validate required fields
       if (!dataToStore.userId || !dataToStore.username || !dataToStore.userRole) {
         throw new Error('Incomplete user data');
       }
@@ -6813,7 +6702,6 @@ const AdminStorage = {
       let storageKey = null;
       
       if (isAdminPanel()) {
-        // On admin panel, try admin storage first
         storageKey = CONFIG.ADMIN_STORAGE_KEY;
         const adminData = localStorage.getItem(storageKey);
         if (adminData) {
@@ -6821,7 +6709,6 @@ const AdminStorage = {
           log('Retrieved admin data from admin storage', userData);
         }
       } else {
-        // On user pages, try user storage first
         storageKey = CONFIG.USER_STORAGE_KEY;
         const regularUserData = localStorage.getItem(storageKey);
         if (regularUserData) {
@@ -6830,19 +6717,16 @@ const AdminStorage = {
         }
       }
       
-      // If no data found in appropriate storage, try legacy migration
       if (!userData) {
         userData = this.migrateLegacyData();
       }
       
-      // Validate user data
       if (userData) {
         if (!userData.username || !userData.userRole) {
           log('Invalid user data structure', userData, 'warn');
           return null;
         }
         
-        // On admin panel, ensure user is admin
         if (isAdminPanel() && userData.userRole !== 'admin') {
           log('Non-admin user trying to access admin panel', userData, 'warn');
           return null;
@@ -6867,11 +6751,9 @@ const AdminStorage = {
       
       log('Migrating legacy data', userData);
       
-      // Store in appropriate new location
       const newStorageKey = this.getStorageKey(userData.userRole);
       localStorage.setItem(newStorageKey, legacyData);
       
-      // Remove legacy data
       localStorage.removeItem(CONFIG.LEGACY_STORAGE_KEY);
       
       log(`Legacy data migrated to: ${newStorageKey}`);
@@ -6900,11 +6782,9 @@ const AdminStorage = {
 // Storage change monitoring
 function monitorStorageChanges() {
   window.addEventListener('storage', function(e) {
-    // Only react to changes in our storage keys
     if (e.key === CONFIG.ADMIN_STORAGE_KEY || e.key === CONFIG.USER_STORAGE_KEY || e.key === CONFIG.LEGACY_STORAGE_KEY) {
       log('Storage change detected', { key: e.key, newValue: e.newValue ? 'Data present' : 'Data removed' });
       
-      // Check if our authentication is still valid
       const currentUser = AdminStorage.getUserData();
       if (!currentUser && isAdminPanel()) {
         showToast('Session Changed', 'Admin session was modified in another tab', 'warning', 3000);
@@ -6949,7 +6829,6 @@ if (typeof window !== 'undefined') {
 
 // UI management functions
 const AdminUI = {
-  // Update statistics display
   updateStatistics() {
     const stats = {
       total: AppState.allUsers.length,
@@ -7292,13 +7171,12 @@ function log(message, data = null, level = 'info') {
 function formatDate(dateString) {
   if (!dateString) return 'N/A';
   try {
-    // Parse trực tiếp từ string không để JS convert timezone
     const parts = dateString.match(/(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
     if (parts) {
       const [, year, month, day, hour, minute] = parts;
       return `${new Date(year, month-1, day).toLocaleDateString('en-US', {month: 'short'})} ${day}, ${year}, ${hour.padStart(2,'0')}:${minute}`;
     }
-    return dateString; // fallback
+    return dateString; 
   } catch (e) {
     return 'Invalid Date';
   }
@@ -7309,7 +7187,6 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Check if current page is admin panel
 function isAdminPanel() {
   return window.location.pathname.includes('admin') || 
          window.location.href.includes('admin') ||
@@ -7320,18 +7197,15 @@ function isAdminPanel() {
 // Initialize DOM elements
 function initializeElements() {
   elements = {
-    // Header elements
     adminUsername: document.getElementById('adminUsername'),
     connectionStatus: document.getElementById('connectionStatus'),
     connectionText: document.getElementById('connectionText'),
     logoutBtn: document.getElementById('logoutBtn'),
     
-    // Statistics elements
     totalUsers: document.getElementById('totalUsers'),
     activeUsers: document.getElementById('activeUsers'),
     plusUsers: document.getElementById('plusUsers'),
     
-    // Table elements
     searchInput: document.getElementById('searchInput'),
     userTableBody: document.getElementById('userTableBody'),
     refreshBtn: document.getElementById('refreshBtn'),
@@ -7339,7 +7213,6 @@ function initializeElements() {
     debugInfo: document.getElementById('debugInfo'),
     debugContent: document.getElementById('debugContent'),
     
-    // Modal elements
     userModal: document.getElementById('userModal'),
     modalTitle: document.getElementById('modalTitle'),
     userForm: document.getElementById('userForm'),
@@ -7349,7 +7222,6 @@ function initializeElements() {
     saveBtnText: document.getElementById('saveBtnText'),
     saveBtnLoader: document.getElementById('saveBtnLoader'),
     
-    // Form fields
     editUserId: document.getElementById('editUserId'),
     username: document.getElementById('username'),
     email: document.getElementById('email'),
@@ -7359,14 +7231,12 @@ function initializeElements() {
     passwordRequired: document.getElementById('passwordRequired'),
     passwordHint: document.getElementById('passwordHint'),
     
-    // Account settings
     accountSettings: document.getElementById('accountSettings'),
     isActive: document.getElementById('isActive'),
     isPlusAccount: document.getElementById('isPlusAccount'),
     isAdmin: document.getElementById('isAdmin'),
     roleSelection: document.getElementById('roleSelection'),
     
-    // Quick toggle modal
     quickToggleModal: document.getElementById('quickToggleModal'),
     quickToggleUsername: document.getElementById('quickToggleUsername'),
     quickToggleOptions: document.getElementById('quickToggleOptions'),
@@ -7375,7 +7245,6 @@ function initializeElements() {
     quickToggleBtnText: document.getElementById('quickToggleBtnText'),
     quickToggleBtnLoader: document.getElementById('quickToggleBtnLoader'),
     
-    // Other elements
     loadingOverlay: document.getElementById('loadingOverlay'),
     toastContainer: document.getElementById('toastContainer')
   };
@@ -7388,11 +7257,9 @@ function fixInputStyling() {
   const inputs = document.querySelectorAll('input, select');
   
   inputs.forEach(input => {
-    // Remove all HTML5 validation attributes
     input.removeAttribute('aria-invalid');
     input.removeAttribute('aria-describedby');
     
-    // Remove any invalid/valid classes
     input.classList.remove('invalid', 'valid', 'error');
     
     // Force reset styling
@@ -7422,7 +7289,6 @@ function fixInputStyling() {
 
 // Setup input fixes
 function setupInputFixes() {
-  // Observer for modal changes
   const userModal = document.getElementById('userModal');
   if (userModal) {
     const observer = new MutationObserver(function(mutations) {
@@ -7550,17 +7416,49 @@ class DashboardManager {
     async init() {
         console.log('Initializing dashboard...');
         
-        // Check admin authentication
+        this.updateConnectionStatus('connecting', 'Connecting to database...');
+        
         if (!this.checkAdminAuth()) {
+            this.updateConnectionStatus('error', 'Authentication failed');
             window.location.href = 'login.html';
             return;
         }
         
-        // Setup event listeners
         this.setupEventListeners();
         
-        // Load initial data
         await this.loadDashboardData();
+    }
+
+    updateConnectionStatus(status, text) {
+        const statusIndicator = document.getElementById('connectionStatus');
+        const connectionText = document.getElementById('connectionText');
+        
+        console.log(`Updating connection status to: ${status} - ${text}`);
+        
+        if (statusIndicator) {
+            statusIndicator.className = 'status-indicator';
+            switch(status) {
+                case 'connecting':
+                    statusIndicator.classList.add('status-loading');
+                    break;
+                case 'connected':
+                    statusIndicator.classList.add('status-success');
+                    break;
+                case 'error':
+                    statusIndicator.classList.add('status-error');
+                    break;
+            }
+            console.log('Status indicator classes:', statusIndicator.className);
+        } else {
+            console.error('Status indicator element not found');
+        }
+        
+        if (connectionText) {
+            connectionText.textContent = text;
+            console.log('Connection text updated to:', text);
+        } else {
+            console.error('Connection text element not found');
+        }
     }
 
     checkAdminAuth() {
@@ -7580,28 +7478,24 @@ class DashboardManager {
     setupEventListeners() {
         console.log('Setting up dashboard event listeners...');
 
-        // Back to Admin button - ✅ THÊM EVENT LISTENER NÀY
         document.getElementById('backToAdminBtn')?.addEventListener('click', (e) => {
-            console.log('Back to Admin button clicked');
+            console.log('Back to Admin Panel button clicked');
             e.preventDefault();
             window.location.href = 'admin.html';
         });
 
-        // Refresh button
         document.getElementById('refreshDashboardBtn')?.addEventListener('click', (e) => {
             console.log('Refresh dashboard button clicked');
             e.preventDefault();
             this.loadDashboardData();
         });
 
-        // Export button
         document.getElementById('exportStatsBtn')?.addEventListener('click', (e) => {
             console.log('Export stats button clicked');
             e.preventDefault();
             this.exportStatistics();
         });
 
-        // Timeframe selector
         document.getElementById('timeframeSelect')?.addEventListener('change', (e) => {
             console.log('Timeframe changed:', e.target.value);
             this.updateTimelineChart(e.target.value);
@@ -7615,11 +7509,11 @@ class DashboardManager {
         
         this.isLoading = true;
         this.showLoading(true);
+        this.updateConnectionStatus('connecting', 'Loading data...');
         
         try {
             console.log('Loading dashboard data...');
             
-            // Load all data in parallel
             const [overviewData, accountTypesData, languagesData, timeframeData] = await Promise.all([
                 this.fetchOverviewStats(),
                 this.fetchAccountTypesStats(),
@@ -7634,16 +7528,16 @@ class DashboardManager {
                 timeframe: timeframeData
             };
 
-            // Update UI
             this.updateOverviewCards();
             this.updateCharts();
             
             console.log('Dashboard data loaded successfully:', this.data);
+            this.updateConnectionStatus('connected', 'Connected to Database');
 
         } catch (error) {
             console.error('Error loading dashboard data:', error);
+            this.updateConnectionStatus('error', 'Connection failed');
             this.showError(true);
-            // Show user-friendly error
             this.showToast('Error', 'Failed to load dashboard data: ' + error.message, 'error');
         } finally {
             this.isLoading = false;
@@ -7706,7 +7600,7 @@ class DashboardManager {
             return;
         }
 
-        // Update user stats - ✅ SỬA STRUCTURE
+        // Update user stats
         document.getElementById('totalUsersCount').textContent = overview.total_users || 0;
         document.getElementById('activeUsersCount').textContent = overview.active_users || 0;
 
@@ -8073,17 +7967,12 @@ class DashboardManager {
 
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, initializing dashboard...');
+  console.log('DOM loaded, initializing dashboard...');
+  if (!window.__dashboardInitialized) {
+    window.__dashboardInitialized = true;
     new DashboardManager();
+  }
 });
-
-// Also try immediate execution in case DOM is already loaded
-if (document.readyState === 'loading') {
-    console.log('Waiting for DOM...');
-} else {
-    console.log('DOM already loaded, initializing dashboard immediately...');
-    new DashboardManager();
-}
 ```
 
 ### frontend\public\js\introduction\demoHandler.js
@@ -8265,7 +8154,6 @@ function findErrors(text) {
 
 // Simulate API call for grammar checking
 export async function performDemoGrammarCheck(text, language) {
-    // Simulate realistic API delay
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     const mockErrors = findErrors(text);
@@ -8418,14 +8306,12 @@ function setupButtonHandlers() {
 
 // Setup modal event listeners
 function setupModalHandlers() {
-    // Handle modal close buttons with data attributes
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('close') && e.target.dataset.modal === 'usageLimitModal') {
             closeUsageLimitModal();
         }
     });
 
-    // Close modal when clicking outside
     window.addEventListener('click', (event) => {
         const modal = document.getElementById('usageLimitModal');
         if (event.target === modal) {
@@ -8438,17 +8324,14 @@ function setupModalHandlers() {
 function initializeApp() {
     console.log('🚀 Initializing Enhanced AI Grammar Editor...');
     
-    // Initialize UI components
     initSmoothScrolling();
     initAccordion();
     updateButtonVisibility();
     initPageTransitions();
     
-    // Setup event handlers
     setupButtonHandlers();
     setupModalHandlers();
     
-    // Setup demo functionality if elements exist
     const demoCheckBtn = document.getElementById('demoCheckBtn');
     if (demoCheckBtn) {
         demoCheckBtn.addEventListener('click', checkDemoGrammar);
@@ -8460,7 +8343,6 @@ function initializeApp() {
 // Main DOMContentLoaded event listener
 document.addEventListener('DOMContentLoaded', initializeApp);
 
-// Export functions for global access (for backward compatibility)
 window.showToast = showToast;
 window.showCustomAlert = showCustomAlert;
 window.closeUsageLimitModal = closeUsageLimitModal;
@@ -8628,17 +8510,14 @@ export function getCurrentUsage() {
     return parseInt(localStorage.getItem(USAGE_KEY) || '0');
 }
 
-// Get remaining usage count
 export function getRemainingUsage() {
     return Math.max(0, MAX_FREE_USAGE - getCurrentUsage());
 }
 
-// Check if user has remaining free usage
 export function hasRemainingUsage() {
     return getCurrentUsage() < MAX_FREE_USAGE;
 }
 
-// Increment usage count
 export function incrementUsage() {
     const currentUsage = getCurrentUsage();
     const newUsage = currentUsage + 1;
@@ -8646,18 +8525,15 @@ export function incrementUsage() {
     return newUsage;
 }
 
-// Reset usage count (for admin or testing)
 export function resetUsage() {
     localStorage.removeItem(USAGE_KEY);
     return 0;
 }
 
-// Get max free usage limit
 export function getMaxFreeUsage() {
     return MAX_FREE_USAGE;
 }
 
-// Update remaining uses display in UI
 export function updateRemainingUsesDisplay() {
     const remainingUsesEl = document.getElementById('remainingUses');
     if (remainingUsesEl) {
@@ -8672,16 +8548,13 @@ export function updateRemainingUsesDisplay() {
 
 // Toast notification system
 export function showToast(message, type = 'success', duration = 4000) {
-    // Remove existing toasts
     const existingToasts = document.querySelectorAll('.toast');
     existingToasts.forEach(toast => toast.remove());
     
-    // Create new toast
     const toast = document.createElement('div');
     toast.className = `toast show ${type}`;
     toast.innerHTML = `<span id="toastMessage">${message}</span>`;
     
-    // Apply type-specific styling
     const colors = {
         error: '#e74c3c',
         info: '#3498db',
@@ -8721,7 +8594,6 @@ export function showToast(message, type = 'success', duration = 4000) {
     }, duration);
 }
 
-// Loading overlay control
 export function showLoading(show = true) {
     let overlay = document.getElementById('loadingOverlay');
     
@@ -8730,12 +8602,10 @@ export function showLoading(show = true) {
     }
 }
 
-// Custom alert function
 export function showCustomAlert(message, type = 'info', duration = 3000) {
     showToast(message, type, duration);
 }
 
-// Debounce function for performance
 export function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {

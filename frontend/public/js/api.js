@@ -76,7 +76,7 @@ export async function logUsageActivity(data) {
           user_id: userData?.userId ?? userData?.id ?? null,
           username: userData?.username ?? userData?.name ?? null,
           action: data.action || null,
-          language: data.language || null,   // thêm dòng này
+          language: data.language || null,
           metadata: data.details ?? data.metadata ?? {},
           user_agent: navigator.userAgent || '',
           session_id: sessionStorage.getItem('sessionId') || ''
@@ -95,7 +95,6 @@ export async function logUsageActivity(data) {
         console.error('Error logging usage:', error);
     }
 }
-
 
 async function safeJson(response) {
   try {
@@ -126,59 +125,209 @@ export const fetchLanguages = async () => {
   }
 };
 
-/** detectLanguage with caching + simple heuristics + fallback */
-export const detectLanguage = async (text) => {
-  if (typeof text !== 'string' || text.trim() === '') throw new Error('Text must be a non-empty string.');
-  const trimmed = text.trim();
-  const cacheKey = frontendCache.generateKey(trimmed, 'detect');
-  const cached = frontendCache.get(cacheKey);
-  if (cached) return cached;
-  if (trimmed.length < 15) { frontendCache.set(cacheKey, 'en-US'); return 'en-US'; }
-  if (trimmed.length < 50 && /^[a-zA-Z\s.,!?'"()-]+$/.test(trimmed)) {
-    frontendCache.set(cacheKey, 'en-US'); return 'en-US';
+/** 
+ * detectLanguage - Enhanced with CLD3 backend
+ * Now returns detailed detection info including confidence and source
+ */
+export const detectLanguage = async (text, options = {}) => {
+  if (typeof text !== 'string' || text.trim() === '') {
+    throw new Error('Text must be a non-empty string.');
   }
+  
+  const trimmed = text.trim();
+  const skipCache = options.skipCache || false;
+  
+  // Check cache first
+  if (!skipCache) {
+    const cacheKey = frontendCache.generateKey(trimmed, 'detect');
+    const cached = frontendCache.get(cacheKey);
+    if (cached) {
+      console.log('🎯 Language detection from cache');
+      return cached;
+    }
+  }  
   try {
+    const startTime = performance.now();
     const res = await fetch(`${API_BASE_URL}/grammar/detect`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: trimmed })
     });
+    
     const data = await safeJson(res) || {};
-    const detected = data?.language || data?.data?.language || data?.detected || 'en-US';
-    frontendCache.set(cacheKey, detected);
-    return detected;
+    let result;
+    if (data?.success && data?.data) {
+      result = {
+        language: data.data.language,  
+        confidence: data.data.confidence,
+        reliable: data.data.reliable,
+        source: data.data.source,
+        detection_time_ms: data.data.detection_time_ms
+      };
+    } else {
+      result = {
+        language: 'en-US',
+        confidence: 0.5,
+        reliable: false,
+        source: 'fallback'
+      };
+    }
+    
+    // Cache
+    frontendCache.set(frontendCache.generateKey(trimmed, 'detect'), result);
+    
+    console.log(`🔍 Language detected: ${result.language} (${(result.confidence * 100).toFixed(1)}%, ${result.source})`);
+    return result;
+    
   } catch (err) {
     console.error('detectLanguage error', err);
-    frontendCache.set(cacheKey, 'en-US');
-    return 'en-US';
+    return {
+      language: 'en-US',
+      confidence: 0.5,
+      reliable: false,
+      source: 'error-fallback',
+      error: err.message
+    };
   }
 };
 
-/** checkGrammar with caching + tolerant response parsing */
-export const checkGrammar = async (text, language = 'en-US') => {
-  if (typeof text !== 'string' || text.trim() === '') throw new Error('Text must be a non-empty string.');
-  const trimmed = text.trim();
-  const cacheKey = frontendCache.generateKey(trimmed, 'grammar', language);
-  const cached = frontendCache.get(cacheKey);
-  if (cached) return cached;
+/**
+ * NEW: detectMultipleLanguages
+ * Detect multiple possible languages in text
+ */
+export const detectMultipleLanguages = async (text, maxResults = 3) => {
+  if (typeof text !== 'string' || text.trim() === '') {
+    throw new Error('Text must be a non-empty string.');
+  }
+  
   try {
-    const res = await fetch(`${API_BASE_URL}/grammar/check`, {
+    const res = await fetch(`${API_BASE_URL}/grammar/detect-multiple`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text.trim(), maxResults })
+    });
+    
+    const data = await safeJson(res) || {};
+    
+    if (data?.success && data?.data?.languages) {
+      return data.data.languages;
+    }
+    
+    throw new Error('Invalid response from server');
+  } catch (err) {
+    console.error('detectMultipleLanguages error', err);
+    throw err;
+  }
+};
+
+/** 
+ * checkGrammar - Enhanced with auto language detection support
+ * Now includes language_detection info in response when language='auto'
+ */
+export const checkGrammar = async (text, language = 'auto', options = {}) => {
+  if (typeof text !== 'string' || text.trim() === '') {
+    throw new Error('Text must be a non-empty string.');
+  }
+  
+  const trimmed = text.trim();
+  const useFastCheck = options.fast || false;
+  
+  // Check cache (only if not forcing fresh check)
+  if (!options.skipCache) {
+    const cacheKey = frontendCache.generateKey(trimmed, 'grammar', language);
+    const cached = frontendCache.get(cacheKey);
+    if (cached) {
+      console.log('🎯 Grammar check from cache');
+      return cached;
+    }
+  }
+  
+  try {
+    const endpoint = useFastCheck ? '/grammar/check-fast' : '/grammar/check';
+    const startTime = performance.now();
+    
+    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: trimmed, language })
     });
+    
     const data = await safeJson(res) || {};
-    // Accept shapes: { success: true, data: {...} } or { success: true, matches: [...] } or { matches: [...] }
+    
+    // Parse response (tolerant to different formats)
     let result = null;
-    if (data.success && data.data) result = data.data;
-    else if (data.matches) result = { matches: data.matches };
-    else if (data.data?.matches) result = data.data;
-    else result = data; // fallback to raw
-    frontendCache.set(cacheKey, result);
+    if (data.success && data.data) {
+      result = data.data;
+    } else if (data.matches) {
+      result = { matches: data.matches };
+    } else if (data.data?.matches) {
+      result = data.data;
+    } else {
+      result = data;
+    }
+    
+    // Add frontend timing if not present
+    if (!result.performance) {
+      result.performance = {
+        frontend_time_ms: performance.now() - startTime
+      };
+    }
+    
+    // Cache the result
+    frontendCache.set(frontendCache.generateKey(trimmed, 'grammar', language), result);
+    
+    // Log detection info if available
+    if (result.language_detection) {
+      console.log(`🔍 Auto-detected: ${result.language_detection.detected_language} (${(result.language_detection.confidence * 100).toFixed(1)}%)`);
+    }
+    
+    console.log(`✅ Grammar check: ${result.matches?.length || 0} issues found`);
     return result;
+    
   } catch (err) {
     console.error('checkGrammar error', err);
     throw new Error('Could not connect to the server to check grammar.');
+  }
+};
+
+/**
+ * NEW: Health check endpoint
+ */
+export const healthCheck = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/grammar/health`);
+    const data = await safeJson(res) || {};
+    
+    if (data?.success && data?.data) {
+      return data.data;
+    }
+    
+    return data;
+  } catch (err) {
+    console.error('healthCheck error', err);
+    return {
+      status: 'unhealthy',
+      error: err.message
+    };
+  }
+};
+
+/**
+ * NEW: Get language detection stats
+ */
+export const getDetectionStats = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/grammar/detection-stats`);
+    const data = await safeJson(res) || {};
+    
+    if (data?.success && data?.data) {
+      return data.data;
+    }
+    
+    return data;
+  } catch (err) {
+    console.error('getDetectionStats error', err);
+    throw err;
   }
 };
 
@@ -186,10 +335,18 @@ export const checkGrammar = async (text, language = 'en-US') => {
 export async function registerUser(userData) {
   try {
     const res = await fetch(`${API_BASE_URL}/users/register`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(userData)
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(userData)
     });
     const data = await safeJson(res);
-    return { success: res.ok && data?.success, message: data?.message, error: data?.error, status: res.status, data: data?.data || data };
+    return { 
+      success: res.ok && data?.success, 
+      message: data?.message, 
+      error: data?.error, 
+      status: res.status, 
+      data: data?.data || data 
+    };
   } catch (err) {
     console.error('registerUser error', err);
     return { success: false, error: 'Network error', status: 500 };
@@ -200,7 +357,9 @@ export async function registerUser(userData) {
 export async function loginUser(username, password) {
   try {
     const res = await fetch(`${API_BASE_URL}/users/login`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password })
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ username, password })
     });
     const data = await safeJson(res) || {};
     return {
@@ -227,7 +386,11 @@ export const fetchUsers = async () => {
     const userData = getUserData();
     if (!userData) throw new Error('Authentication required');
     const res = await fetch(`${API_BASE_URL}/users/admin/users`, {
-      method: 'GET', headers: { 'Content-Type': 'application/json', 'x-user-role': userData.userRole }
+      method: 'GET', 
+      headers: { 
+        'Content-Type': 'application/json', 
+        'x-user-role': userData.userRole 
+      }
     });
     const data = await safeJson(res) || {};
     if (!res.ok) {
@@ -244,12 +407,23 @@ export const fetchUsers = async () => {
 export const updateUser = async (userId, userData) => {
   try {
     const currentUser = getUserData();
-    if (!currentUser || currentUser.userRole !== 'admin') return { success: false, error: 'Admin auth required' };
+    if (!currentUser || currentUser.userRole !== 'admin') {
+      return { success: false, error: 'Admin auth required' };
+    }
     const res = await fetch(`${API_BASE_URL}/users/admin/update/${userId}`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-user-role': currentUser.userRole }, body: JSON.stringify(userData)
+      method: 'PUT', 
+      headers: { 
+        'Content-Type': 'application/json', 
+        'x-user-role': currentUser.userRole 
+      }, 
+      body: JSON.stringify(userData)
     });
     const data = await safeJson(res) || {};
-    return { success: res.ok && data.success, error: data.error, message: data.message };
+    return { 
+      success: res.ok && data.success, 
+      error: data.error, 
+      message: data.message 
+    };
   } catch (err) {
     console.error('updateUser error', err);
     return { success: false, error: 'Network error' };
@@ -260,12 +434,22 @@ export const updateUser = async (userId, userData) => {
 export const deleteUser = async (userId) => {
   try {
     const currentUser = getUserData();
-    if (!currentUser || currentUser.userRole !== 'admin') return { success: false, error: 'Admin auth required' };
+    if (!currentUser || currentUser.userRole !== 'admin') {
+      return { success: false, error: 'Admin auth required' };
+    }
     const res = await fetch(`${API_BASE_URL}/users/admin/delete/${userId}`, {
-      method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-user-role': currentUser.userRole }
+      method: 'DELETE', 
+      headers: { 
+        'Content-Type': 'application/json', 
+        'x-user-role': currentUser.userRole 
+      }
     });
     const data = await safeJson(res) || {};
-    return { success: res.ok && data.success, error: data.error, message: data.message };
+    return { 
+      success: res.ok && data.success, 
+      error: data.error, 
+      message: data.message 
+    };
   } catch (err) {
     console.error('deleteUser error', err);
     return { success: false, error: 'Network error' };

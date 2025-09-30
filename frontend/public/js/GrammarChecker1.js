@@ -1,18 +1,60 @@
-// GrammarChecker1.js
+// GrammarChecker1.js - With Language Validation
 import { SectionManager } from './sectionManager.js';
 import { checkGrammar, detectLanguage, logUsageActivity } from './api.js'; 
 import { showCustomAlert } from './utils.js';
 import { NotificationManager } from './notifications.js';
 
 const LANGUAGE_NAMES = {
-  'en-US': 'English', 'fr': 'French', 'de': 'German', 'ru': 'Russian',
-  'ja': 'Japanese', 'ja-JP': 'Japanese', 'es': 'Spanish', 'pt': 'Portuguese',
-  'gl-ES': 'Galician', 'de-DE': 'German (Germany)'
+  'en-US': 'English (US)', 'en': 'English', 'fr': 'French', 'de': 'German', 
+  'ru': 'Russian', 'ru-RU': 'Russian', 'uk': 'Ukrainian', 'uk-UA': 'Ukrainian',
+  'ja': 'Japanese', 'ja-JP': 'Japanese', 
+  'es': 'Spanish', 'pt': 'Portuguese', 'gl-ES': 'Galician', 'de-DE': 'German (Germany)',
+  'it': 'Italian', 'nl': 'Dutch', 'pl-PL': 'Polish', 'sv': 'Swedish',
+  'da-DK': 'Danish', 'ar': 'Arabic', 'zh-CN': 'Chinese', 'ko': 'Korean',
+  'vi': 'Vietnamese', 'th': 'Thai', 'be': 'Belarusian', 'bg': 'Bulgarian', 'sr': 'Serbian'
+};
+
+// Language code mapping for comparison (expanded)
+const LANGUAGE_CODE_MAP = {
+  'en-US': 'en',
+  'en': 'en',
+  'ja-JP': 'ja',
+  'ja': 'ja',
+  'zh-CN': 'zh',
+  'zh': 'zh',
+  'ru-RU': 'ru',
+  'ru': 'ru',
+  'uk-UA': 'uk',  
+  'uk': 'uk',
+  'de-DE': 'de',
+  'de': 'de',
+  'fr': 'fr',
+  'es': 'es',
+  'it': 'it',
+  'pt': 'pt',
+  'vi': 'vi',
+  'ko': 'ko',
+  'ar': 'ar',
+  'nl': 'nl',
+  'pl-PL': 'pl',
+  'pl': 'pl',
+  'sv': 'sv',
+  'da-DK': 'da',
+  'da': 'da',
+  'th': 'th',
+  'be': 'be', 
+  'bg': 'bg',  
+  'sr': 'sr'   
 };
 
 function getLanguageName(code) {
   return LANGUAGE_NAMES[code] || code;
 }
+
+function normalizeLanguageCode(code) {
+  return LANGUAGE_CODE_MAP[code] || code;
+}
+
 let currentUser = null;
 
 async function initializeNotifications(user) {
@@ -30,7 +72,6 @@ async function initializeNotifications(user) {
 
     console.log('Initializing notifications for user:', user.username);
     
-    // Đảm bảo chỉ có 1 instance duy nhất
     if (!window.notificationManager) {
       window.notificationManager = new NotificationManager();
       console.log('Created new NotificationManager instance');
@@ -38,9 +79,7 @@ async function initializeNotifications(user) {
       console.log('Using existing NotificationManager instance');
     }
     
-    // Initialize với user data
     await window.notificationManager.init(user.userId, user.userRole || 'user');
-    
     console.log('Notifications initialized successfully');
     
   } catch (error) {
@@ -49,17 +88,13 @@ async function initializeNotifications(user) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-function getLoggedInUser() {
-  // Try new keys first
-  let userData = localStorage.getItem("loggedInAs_user") || localStorage.getItem("loggedInAs_admin");
-  
-  // Fallback to legacy key
-  if (!userData) {
-    userData = localStorage.getItem("loggedInAs");
+  function getLoggedInUser() {
+    let userData = localStorage.getItem("loggedInAs_user") || localStorage.getItem("loggedInAs_admin");
+    if (!userData) {
+      userData = localStorage.getItem("loggedInAs");
+    }
+    return userData ? JSON.parse(userData) : null;
   }
-  
-  return userData ? JSON.parse(userData) : null;
-}
 
   const loggedInUser = getLoggedInUser();
   const textInput = document.getElementById('textInput');
@@ -95,15 +130,12 @@ function getLoggedInUser() {
   
   settingsBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
-    
-    // Calculate position for fixed dropdown
     const rect = settingsBtn.getBoundingClientRect();
     const dropdown = userDropdown;
     
     if (dropdown.classList.contains('show')) {
       dropdown.classList.remove('show');
     } else {
-      // Position dropdown relative to button
       dropdown.style.top = `${rect.bottom + 8}px`;
       dropdown.style.right = `${window.innerWidth - rect.right}px`;
       dropdown.classList.add('show');
@@ -116,7 +148,6 @@ function getLoggedInUser() {
     }
   });
   
-  // Handle window resize to reposition dropdown
   window.addEventListener('resize', () => {
     if (userDropdown.classList.contains('show')) {
       const rect = settingsBtn.getBoundingClientRect();
@@ -127,12 +158,12 @@ function getLoggedInUser() {
 
   document.querySelector('.logout-btn')?.addEventListener('click', () => {
     localStorage.removeItem("loggedInAs");
+    localStorage.removeItem("loggedInAs_user");
+    localStorage.removeItem("loggedInAs_admin");
     localStorage.removeItem("lastGrammarMatches");
     
-    // ADD THIS: Cleanup notification manager on logout
     currentUser = null;
-    if (notificationManager) {
-      notificationManager = null;
+    if (window.notificationManager) {
       window.notificationManager = null;
     }
     
@@ -215,18 +246,22 @@ function getLoggedInUser() {
     } else if (category.includes('STYLE')) {
       return 'Style Suggestion';
     }
-    return 'Grammar Error'; // default
+    return 'Grammar Error';
   }
 
   function createSuggestionItem(match, index) {
     const errorText = match.context?.text?.slice(match.context.offset, match.context.offset + match.context.length) || 'Unknown';
     const firstReplacement = match.replacements?.[0]?.value || '';
     const errorType = getErrorTypeClass(match);
+    const source = match.source || 'languagetool';
     
     const li = document.createElement('li');
     li.className = 'suggestion-item';
     li.innerHTML = `
-      <div class="suggestion-error">${errorType}</div>
+      <div class="suggestion-header">
+        <div class="suggestion-error">${errorType}</div>
+        <div class="suggestion-source" title="Detection source">${source}</div>
+      </div>
       <div class="suggestion-message">${escapeHtml(match.message)}</div>
       <div class="suggestion-actions">
         ${firstReplacement ? `<span class="suggestion-fix">${escapeHtml(errorText)} → ${escapeHtml(firstReplacement)}</span>` : '<em>No suggestions available</em>'}
@@ -253,17 +288,6 @@ function getLoggedInUser() {
       html += `<span class="grammar-error" data-error-index="${index}" title="${escapeHtml(match.message)}">${escapeHtml(errorText)}</span>`;
       lastIndex = match.offset + match.length;
 
-      // Console logging for debugging
-      const firstReplacement = match.replacements?.[0]?.value;
-      const source = match.source || 'Unknown';
-      console.log(`🔎 Suggestion #${index + 1}`);
-      console.log(`📌 Mistake: "${errorText}"`);
-      console.log(`💡 Suggest: "${firstReplacement || '[No suggestion]'}"`);
-      console.log(`📖 Message: ${match.message}`);
-      console.log(`🏷️ Source: ${source}`);
-      console.log('-----------------------');
-
-      // Create suggestion item with new design
       const suggestionItem = createSuggestionItem(match, index);
       suggestionsList.appendChild(suggestionItem);
     });
@@ -271,7 +295,6 @@ function getLoggedInUser() {
     html += escapeHtml(text.slice(lastIndex));
     highlightedTextDiv.innerHTML = html;
 
-    // Add event listeners to apply buttons
     document.querySelectorAll('.suggestion-apply-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const index = parseInt(e.target.dataset.errorIndex);
@@ -280,7 +303,6 @@ function getLoggedInUser() {
       });
     });
 
-    // Add event listeners to grammar errors in text
     document.querySelectorAll('.grammar-error').forEach(el => {
       el.addEventListener('click', () => {
         const index = parseInt(el.dataset.errorIndex);
@@ -298,7 +320,6 @@ function getLoggedInUser() {
     acceptAllBtn?.classList.remove('hidden');
   }
 
-  // Accept All functionality
   acceptAllBtn?.addEventListener('click', () => {
     const matches = JSON.parse(localStorage.getItem('lastGrammarMatches') || '[]');
     if (!matches.length) return;
@@ -340,7 +361,6 @@ function getLoggedInUser() {
     textInput.value = newText;
     highlightedTextDiv.textContent = newText;
     
-    // Remove the applied suggestion from the list
     const suggestionItem = document.querySelector(`[data-error-index="${index}"]`).closest('.suggestion-item');
     if (suggestionItem) {
       suggestionItem.style.transform = 'translateX(100%)';
@@ -348,14 +368,12 @@ function getLoggedInUser() {
       setTimeout(() => {
         suggestionItem.remove();
         
-        // Check if there are any suggestions left
         const remainingSuggestions = suggestionsList.querySelectorAll('.suggestion-item');
         if (remainingSuggestions.length === 0) {
           showNoSuggestions();
           acceptAllBtn?.classList.add('hidden');
         }
         
-        // Update error count
         errorCountSpan.textContent = remainingSuggestions.length;
       }, 300);
     }
@@ -380,27 +398,30 @@ function getLoggedInUser() {
   }
 
   function populateLanguages() {
-    languageSelect.innerHTML = ''; // Clear existing options
+    languageSelect.innerHTML = '';
     [
       { code: 'en-US', name: 'English (US)' },
-      { code: 'ja-JP', name: 'Japanese' },
       { code: 'fr', name: 'French' },
       { code: 'de', name: 'German' },
-      { code: 'ru', name: 'Russian' },
       { code: 'es', name: 'Spanish' },
+      { code: 'it', name: 'Italian' },
+      { code: 'pt', name: 'Portuguese' },
+      { code: 'ru', name: 'Russian' },
+      { code: 'ja-JP', name: 'Japanese' },
+      { code: 'zh-CN', name: 'Chinese' }
     ].forEach(({ code, name }) => {
       const opt = document.createElement('option');
       opt.value = code;
       opt.textContent = name;
       languageSelect.appendChild(opt);
     });
-    languageSelect.value = 'en-US';
+    languageSelect.value = 'en-US'; 
   }
 
   checkGrammarBtn?.addEventListener('click', async () => {
     hideMessages();
     const text = textInput.value.trim();
-    const lang = languageSelect.value;
+    const selectedLang = languageSelect.value;
 
     if (!text) {
       showMessage(errorMessageDiv, 'Please enter some text to check.', 'error');
@@ -408,30 +429,117 @@ function getLoggedInUser() {
     }
     
     if (!loggedInUser?.userId && getFreeUsageCount() >= 3) {
-      showMessage(errorMessageDiv, '⚠️ You have used all 3 free grammar checks. Please log in to continue.', 'error');
+      showMessage(errorMessageDiv, 'You have used all 3 free grammar checks. Please log in to continue.', 'error');
       return showLoginModal();
     }
 
     showLoading(true);
+    
     try {
-      const detectedLang = await detectLanguage(text);
-      if (detectedLang !== lang) {
-        showMessage(errorMessageDiv, `⚠️ Detected language is "${getLanguageName(detectedLang)}", but you selected "${getLanguageName(lang)}".`, 'error');
+      const japanesePattern = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/; 
+      const chinesePattern = /[\u4E00-\u9FFF]/; 
+      const koreanPattern = /[\uAC00-\uD7AF\u1100-\u11FF]/; 
+      const arabicPattern = /[\u0600-\u06FF\u0750-\u077F]/; 
+      const cyrillicPattern = /[\u0400-\u04FF]/; 
+      const thaiPattern = /[\u0E00-\u0E7F]/; 
+      
+      let preDetectedLang = null;
+      
+      if (japanesePattern.test(text)) {
+        preDetectedLang = 'ja-JP';
+        console.log('Pre-detected Japanese by Unicode range');
+      } else if (koreanPattern.test(text)) {
+        preDetectedLang = 'ko';
+        console.log('Pre-detected Korean by Unicode range');
+      } else if (thaiPattern.test(text)) {
+        preDetectedLang = 'th';
+        console.log('Pre-detected Thai by Unicode range');
+      } else if (arabicPattern.test(text)) {
+        preDetectedLang = 'ar';
+        console.log('Pre-detected Arabic by Unicode range');
+      } else if (cyrillicPattern.test(text)) {
+        preDetectedLang = 'ru-RU';
+        console.log('Pre-detected Cyrillic (Russian) by Unicode range');
+      }
+      
+      let detectionInfo;
+      if (preDetectedLang) {
+        detectionInfo = {
+          language: preDetectedLang,
+          confidence: 0.95, 
+          reliable: true,
+          source: 'unicode-pattern'
+        };
+      } else {
+        console.log('Detecting language with CLD3...');
+        detectionInfo = await detectLanguage(text);
+      }
+      const detectedLang = normalizeLanguageCode(detectionInfo.language);
+      const selectedLangNormalized = normalizeLanguageCode(selectedLang);
+      
+      console.log(`Selected: ${selectedLang} (${selectedLangNormalized})`);
+      console.log(`Detected: ${detectionInfo.language} (${detectedLang})`);
+      console.log(`Confidence: ${(detectionInfo.confidence * 100).toFixed(1)}%`);
+      
+      const shouldValidate = detectionInfo.confidence > 0.3;
+      const cyrillicLanguages = ['ru', 'uk', 'be', 'bg', 'sr'];
+      const isCyrillicDetected = cyrillicLanguages.includes(detectedLang);
+      const isCyrillicSelected = cyrillicLanguages.includes(selectedLangNormalized);
+      
+      const areBothCyrillic = isCyrillicDetected && isCyrillicSelected;
+      const shouldShowWarning = shouldValidate && detectedLang !== selectedLangNormalized && !areBothCyrillic;
+      
+      console.log('Validation check:', {
+        shouldValidate,
+        languageMatch: detectedLang === selectedLangNormalized,
+        areBothCyrillic,
+        shouldShowWarning
+      });
+      
+      if (shouldShowWarning) {
+        showLoading(false);
+        
+        const detectedLangName = getLanguageName(detectionInfo.language);
+        const selectedLangName = getLanguageName(selectedLang);
+        
+        showMessage(
+          errorMessageDiv, 
+          `Language mismatch! Text language is "${detectedLangName}" but you selected "${selectedLangName}". Please select the correct language.`,
+          'error'
+        );
+        
+        // Highlight the language selector to draw attention
+        languageSelect.style.border = '2px solid #dc3545';
+        setTimeout(() => {
+          languageSelect.style.border = '';
+        }, 3000);
+        
+        showCustomAlert(
+          `Detected language: ${detectedLangName}\nYou selected: ${selectedLangName}\n\nPlease change your language selection.`,
+          'error'
+        );
+        
         return;
       }
-
+      
       if (!loggedInUser?.userId) incrementFreeUsageCount();
 
-      const { matches = [] } = await checkGrammar(text);
+      console.log(`Language validation passed. Checking grammar...`);
+      const result = await checkGrammar(text, selectedLang);
+      const matches = result.matches || [];
+      
       localStorage.setItem('lastGrammarMatches', JSON.stringify(matches));
 
       if (loggedInUser?.userId) {
         await logUsageActivity({
           action: 'grammar_check',
-          language: detectedLang, 
+          language: selectedLang,
           details: {
             text_length: text.length,
             errors_found: matches.length,
+            detected_language: detectionInfo.language,
+            detection_confidence: detectionInfo.confidence,
+            language_match: detectedLang === selectedLangNormalized,
             timestamp: new Date().toISOString()
           }
         });
@@ -449,6 +557,7 @@ function getLoggedInUser() {
       }
 
       errorCountSpan.textContent = matches.length;
+      
     } catch (err) {
       console.error('Error checking grammar:', err);
       showMessage(errorMessageDiv, 'Grammar check failed. Please try again.', 'error');
@@ -486,7 +595,7 @@ function getLoggedInUser() {
   // Initialize
   populateLanguages();
   updateStats();
-  // Set initial placeholder if no text
+  
   if (!textInput.value.trim()) {
     highlightedTextDiv.innerHTML = `
       <div class="placeholder-text">
@@ -497,4 +606,3 @@ function getLoggedInUser() {
     `;
   }
 });
-
