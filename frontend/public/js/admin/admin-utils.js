@@ -18,7 +18,6 @@ function log(message, data = null, level = 'info') {
       console.warn(logMessage, data || '');
       break;
     default:
-      console.log(logMessage, data || '');
   }
   
   // Add to debug panel if enabled
@@ -123,24 +122,19 @@ function initializeElements() {
   log('DOM elements initialized');
 }
 
-// Fix input styling issues
 function fixInputStyling() {
   const inputs = document.querySelectorAll('input, select');
   
   inputs.forEach(input => {
     input.removeAttribute('aria-invalid');
     input.removeAttribute('aria-describedby');
-    
     input.classList.remove('invalid', 'valid', 'error');
-    
-    // Force reset styling
     input.style.borderColor = '#667eea';
     input.style.boxShadow = 'none';
     input.style.outline = 'none';
     input.style.transform = 'none';
     input.style.backfaceVisibility = 'hidden';
     
-    // Override events
     const events = ['focus', 'blur', 'invalid', 'input'];
     events.forEach(eventType => {
       input.addEventListener(eventType, function(e) {
@@ -257,7 +251,6 @@ function downloadFile(content, filename, contentType) {
   URL.revokeObjectURL(url);
 }
 
-// Global exports
 if (typeof window !== 'undefined') {
   window.log = log;
   window.formatDate = formatDate;

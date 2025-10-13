@@ -72,9 +72,6 @@ const AdminAPI = {
 
   // Normalize user data from different API formats
   normalizeUsersData(usersData) {
-    console.log('=== DEBUG normalizeUsersData ===');
-    console.log('Raw usersData:', usersData);
-    console.log('First user UpdatedAt:', usersData[0]?.UpdatedAt);
     
     return usersData.map((user, idx) => ({
         id: Number(user.UserID ?? user.id ?? (idx + 1)),
@@ -143,7 +140,7 @@ async updateUser(userId, userData) {
   try {
     log('Starting user update', { userId, userData });
     
-    const currentAdmin = getUserData();
+    const currentAdmin = AuthManager.getCurrentUser();
     if (!currentAdmin || currentAdmin.userRole !== 'admin') {
       throw new Error('Admin access required');
     }

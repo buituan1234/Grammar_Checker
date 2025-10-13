@@ -12,24 +12,24 @@ export class LanguageDetectionService {
     
     // Configuration
     this.config = {
-      minBytes: options.minBytes || 0,
+      minBytes: options.minBytes || 20,
       maxBytes: options.maxBytes || 2000,
       enableCache: options.enableCache !== false,
       cacheTimeout: options.cacheTimeout || 10 * 60 * 1000,
       fallbackLanguage: options.fallbackLanguage || 'en-US',
       logLevel: options.logLevel || 'info'
     };
-
-    // Cache
     this.detectionCache = new Map();
     
-    // Auto cleanup cache
     if (this.config.enableCache) {
       setInterval(() => this.clearExpiredCache(), this.config.cacheTimeout);
     }
 
-    // Initialize CLD3 (non-blocking)
-    this.initialize();
+    this.initialize().catch(err => {
+      if (this.config.logLevel === 'info') {
+        console.warn('LanguageDetectionService initialization started (async).');
+      }
+    });
   }
 
   async initialize() {
@@ -55,7 +55,7 @@ export class LanguageDetectionService {
         return this.cldInstance;
       } catch (error) {
         console.error('Failed to initialize CLD3:', error);
-        console.error('Available cldFactory methods:', Object.keys(cldFactory));
+        console.error('Available cldFactory methods:', Object.keys(cldFactory || {}));
         this.initPromise = null; 
         throw error;
       }
@@ -68,34 +68,29 @@ export class LanguageDetectionService {
   getCLD3ToLanguageToolMapping() {
     return {
       'en': 'en-US', 'fr': 'fr', 'de': 'de', 'es': 'es', 'it': 'it',
-      'pt': 'pt', 'nl': 'nl', 'ru': 'ru-RU', 'pl': 'pl-PL', 'sv': 'sv',
-      'da': 'da-DK', 'no': 'en', 'fi': 'en', 'is': 'en',
-      
-      'cs': 'en', 'sk': 'sk-SK', 'hu': 'en', 'ro': 'ro-RO', 'bg': 'en',
-      'hr': 'en', 'sr': 'en', 'sl': 'sl-SI', 'lv': 'en', 'lt': 'en',
-      'et': 'en', 'mk': 'en', 'mt': 'en',
-      
-      'ca': 'ca-ES', 'eu': 'en', 'gl': 'gl-ES', 'cy': 'en', 'ga': 'ga-IE',
-      'gd': 'en', 'br': 'br-FR', 'co': 'en', 'ast': 'en',
-      
-      'ar': 'ar', 'he': 'en', 'fa': 'fa', 'ur': 'en', 'ps': 'en',
-      'am': 'en', 'ti': 'en', 'so': 'en', 'sw': 'en', 'ha': 'en',
-      
-      'zh': 'zh-CN', 'zh-cn': 'zh-CN', 'zh-tw': 'zh-CN',
-      'ja': 'ja-JP', 'ko': 'en', 'vi': 'en', 'th': 'en', 'lo': 'en',
-      'km': 'en', 'my': 'en', 'si': 'en', 'ta': 'ta-IN', 'te': 'en',
-      'ml': 'en', 'kn': 'en', 'hi': 'en', 'bn': 'en', 'gu': 'en',
-      'pa': 'en', 'mr': 'en', 'ne': 'en', 'or': 'en', 'as': 'en',
-      
-      'tr': 'en', 'az': 'en', 'kk': 'en', 'ky': 'en', 'uz': 'en',
-      'tg': 'en', 'mn': 'en', 'ka': 'en', 'hy': 'en', 'be': 'en',
-      'uk': 'uk-UA', 'tl': 'tl-PH', 'ceb': 'en', 'haw': 'en',
-      'mg': 'en', 'sm': 'en', 'to': 'en', 'fj': 'en'
+      'pt': 'pt', 'nl': 'nl', 'ru': 'ru-RU', 'pl': 'pl-PL', 'sv': 'sv-SE',
+      'da': 'da-DK', 'no': 'no', 'fi': 'fi-FI', 'is': 'is-IS',
+      'cs': 'cs-CZ', 'sk': 'sk-SK', 'hu': 'hu-HU', 'ro': 'ro-RO', 'bg': 'bg-BG',
+      'hr': 'hr-HR', 'sr': 'sr', 'sl': 'sl-SI', 'lv': 'lv-LV', 'lt': 'lt-LT',
+      'et': 'et-EE', 'mk': 'mk-MK', 'mt': 'mt-MT',
+      'ca': 'ca-ES', 'eu': 'eu', 'gl': 'gl-ES', 'cy': 'cy', 'ga': 'ga-IE',
+      'br': 'br-FR', 'ast': 'ast',
+      'ar': 'ar', 'he': 'he', 'fa': 'fa', 'ur': 'ur', 'ps': 'ps',
+      'zh': 'zh-CN', 'zh-cn': 'zh-CN', 'zh-tw': 'zh-TW',
+      'ja': 'ja-JP', 'ko': 'ko-KR', 'vi': 'vi-VN', 'th': 'th', 'lo': 'lo-LA',
+      'km': 'km-KH', 'my': 'my-MM', 'si': 'si-LK', 'ta': 'ta-IN', 'te': 'te-IN',
+      'ml': 'ml-IN', 'kn': 'kn-IN', 'hi': 'hi-IN', 'bn': 'bn-BD', 'gu': 'gu-IN',
+      'pa': 'pa-IN', 'mr': 'mr-IN', 'ne': 'ne-NP', 'or': 'or-IN', 'as': 'as-IN',
+      'tr': 'tr', 'az': 'az', 'kk': 'kk', 'ky': 'ky', 'uz': 'uz',
+      'tg': 'tg', 'mn': 'mn', 'ka': 'ka', 'hy': 'hy', 'be': 'be',
+      'uk': 'uk-UA', 'tl': 'tl-PH', 'ceb': 'ceb', 'haw': 'haw',
+      'mg': 'mg', 'sm': 'sm', 'to': 'to', 'fj': 'fj'
     };
   }
 
   // ================== PATTERN-BASED PRE-CHECK ==================
   preCheckPatterns(text) {
+    if (!text || typeof text !== 'string') return null;
     if (/[\u0400-\u04FF]{3,}/.test(text)) {
       return {
         detected_language: 'ru',
@@ -107,7 +102,6 @@ export class LanguageDetectionService {
       };
     }
 
-    // Japanese Hiragana/Katakana
     if (/[\u3040-\u309F\u30A0-\u30FF]{2,}/.test(text)) {
       return {
         detected_language: 'ja',
@@ -119,7 +113,6 @@ export class LanguageDetectionService {
       };
     }
 
-    // Chinese (Han characters without Japanese kana)
     if (/[\u4E00-\u9FFF]{2,}/.test(text) && !/[\u3040-\u309F\u30A0-\u30FF]/.test(text)) {
       return {
         detected_language: 'zh',
@@ -131,19 +124,17 @@ export class LanguageDetectionService {
       };
     }
 
-    // Korean Hangul
     if (/[\uAC00-\uD7AF\u1100-\u11FF]{2,}/.test(text)) {
       return {
         detected_language: 'ko',
         confidence: 0.98,
-        languagetool_code: 'en',
+        languagetool_code: 'ko-KR',
         reliable: true,
         source: 'pattern-korean',
         detection_time_ms: 0
       };
     }
 
-    // Arabic script
     if (/[\u0600-\u06FF\u0750-\u077F]{2,}/.test(text)) {
       return {
         detected_language: 'ar',
@@ -155,19 +146,17 @@ export class LanguageDetectionService {
       };
     }
 
-    // Thai script
     if (/[\u0E00-\u0E7F]{2,}/.test(text)) {
       return {
         detected_language: 'th',
         confidence: 0.98,
-        languagetool_code: 'en',
+        languagetool_code: 'th',
         reliable: true,
         source: 'pattern-thai',
         detection_time_ms: 0
       };
     }
 
-    // Spanish markers
     if (/[¿¡]/.test(text)) {
       return {
         detected_language: 'es',
@@ -179,179 +168,188 @@ export class LanguageDetectionService {
       };
     }
 
-    // Portuguese specific words
     if (/\b(você|está|não|também|português)\b/i.test(text)) {
       return {
         detected_language: 'pt',
-        confidence: 0.85,
+        confidence: 0.88,
         languagetool_code: 'pt',
         reliable: true,
         source: 'pattern-portuguese',
         detection_time_ms: 0
       };
     }
+
     if (/\b(più|meno|però|anche|già|così|perché|quando|sono|fatto|molto|troppo)\b/i.test(text)) {
-    return {
-      detected_language: 'it',
-      confidence: 0.92,
-      languagetool_code: 'it',
-      reliable: true,
-      source: 'pattern-italian',
-      detection_time_ms: 0
-    };
-  }
+      return {
+        detected_language: 'it',
+        confidence: 0.92,
+        languagetool_code: 'it',
+        reliable: true,
+        source: 'pattern-italian',
+        detection_time_ms: 0
+      };
+    }
+
+    if (/\b(der|die|das|und|ist|nicht|du|was|sind|ein|eine|mit|auf|für|den|dem|zu|von|dass|haben|wir|sie|ich)\b/i.test(text)) {
+      return {
+        detected_language: 'de',
+        confidence: 0.95,
+        languagetool_code: 'de',
+        reliable: true,
+        source: 'pattern-german',
+        detection_time_ms: 0
+      };
+    }
+
+    const englishPattern = /\b(?:the|and|is|are|was|were|have|has|had|do|does|did|will|would|can|could|not|your|my|their|they|we|I)\b/i;
+    const matches = text.toLowerCase().match(new RegExp(englishPattern, 'gi')) || [];
+    if (matches.length >= 2) {
+      return {
+        detected_language: 'en',
+        confidence: 0.9,
+        languagetool_code: 'en-US',
+        reliable: true,
+        source: 'pattern-english',
+        detection_time_ms: 0
+      };
+    }
 
     return null;
   }
 
   // ================== MAIN DETECTION METHOD ==================
   async detectLanguage(text, options = {}) {
-  try {
-    // === DEBUG: Input validation ===
-    console.log('=== LANGUAGE DETECTION DEBUG ===');
-    console.log('Input text:', text);
-    console.log('Text length:', text.length);
-    console.log('Text type:', typeof text);
-    console.log('First 5 chars:', text.slice(0, 5));
-    console.log('Char codes:', [...text.slice(0, 5)].map(c => `${c}:${c.charCodeAt(0).toString(16)}`));
-    
-    if (!text || typeof text !== 'string') {
-      throw new Error('Invalid input: text must be a non-empty string');
-    }
+    try {
+      if (!text || typeof text !== 'string') {
+        throw new Error('Invalid input: text must be a non-empty string');
+      }
+      text = String(text).normalize('NFKC').trim();
 
-    // === DEBUG: Cache check ===
-    if (this.config.enableCache && !options.skipCache) {
-      const cached = this.getFromCache(text);
-      if (cached) {
-        console.log('✅ CACHE HIT - returning cached result:', cached);
-        if (this.config.logLevel === 'debug') {
-          console.log('[CACHE HIT] Language detection');
+      if (this.config.logLevel === 'debug' || this.config.logLevel === 'info') {
+        console.log('\n=== [LDS] LANGUAGE DETECTION DEBUG ===');
+        console.log('[LDS] Input text (trimmed):', text);
+        console.log('[LDS] Text length:', text.length);
+        console.log('[LDS] First 10 chars:', text.slice(0, 10));
+        console.log('[LDS] Char codes (first 8):', [...text.slice(0, 8)].map(c => `${c}:U+${c.charCodeAt(0).toString(16).toUpperCase()}`));
+      }
+
+      if (this.config.enableCache && !options.skipCache) {
+        const cached = this.getFromCache(text);
+        if (cached) {
+          if (this.config.logLevel === 'info' || this.config.logLevel === 'debug') {
+            console.log('[LDS] ✅ CACHE HIT - returning cached result');
+            console.log('[LDS] Cached result:', JSON.stringify(cached, null, 2));
+            console.log('[LDS] ===\n');
+          }
+          return cached;
         }
-        return cached;
       }
-      console.log('❌ CACHE MISS - proceeding with detection');
-    }
 
-    // === DEBUG: Pattern pre-check ===
-    console.log('Testing pattern matching...');
-    console.log('Cyrillic test:', /[\u0400-\u04FF]{3,}/.test(text));
-    console.log('Japanese test:', /[\u3040-\u309F\u30A0-\u30FF]{2,}/.test(text));
-    console.log('Chinese test:', /[\u4E00-\u9FFF]{2,}/.test(text));
-    console.log('Arabic test:', /[\u0600-\u06FF\u0750-\u077F]{2,}/.test(text));
-    console.log('Vietnamese test:', /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(text));
-    
-    const preCheck = this.preCheckPatterns(text);
-    console.log('Pattern pre-check result:', preCheck);
-    
-    if (preCheck) {
-      console.log('✅ Pattern matched! Returning:', preCheck);
+      const preCheck = this.preCheckPatterns(text);
+      if (preCheck) {
+        if (this.config.logLevel === 'info' || this.config.logLevel === 'debug') {
+          console.log('[LDS] ✅ Pattern matched! Source:', preCheck.source);
+        }
+        this.setCache(text, preCheck);
+        return preCheck;
+      }
+
+      // === Ensure CLD3 initialised ===
+      if (!this.isInitialized) {
+        if (this.config.logLevel === 'info') {
+          console.log('⚠️ CLD3 not initialized, initializing now...');
+        }
+        await this.initialize();
+      }
+
+      if (!this.cldInstance) {
+        throw new Error('CLD3 not initialized');
+      }
+
+      if (this.config.logLevel === 'debug' || this.config.logLevel === 'info') {
+        console.log('✅ CLD3 instance ready');
+        console.log('CLD3 config - minBytes:', this.config.minBytes, 'maxBytes:', this.config.maxBytes);
+        console.log('Calling CLD3.findLanguage()...');
+      }
+
+      const startTime = Date.now();
+      const result = this.cldInstance.findLanguage(text);
+      const detectionTime = Date.now() - startTime;
+
+      if (this.config.logLevel === 'debug') {
+        console.log('=== CLD3 RAW RESULT ===');
+        console.log(JSON.stringify(result, null, 2));
+      }
+
+      // === If no language recognized, fallback ===
+      if (!result || !result.language) {
+        if (this.config.logLevel === 'warn' || this.config.logLevel === 'info') {
+          console.warn('⚠️ CLD3 returned invalid result - no language detected');
+        }
+        const fallbackResult = {
+          detected_language: 'en',
+          confidence: 0.5,
+          languagetool_code: this.config.fallbackLanguage,
+          reliable: false,
+          source: 'fallback-no-detection',
+          detection_time_ms: detectionTime,
+          raw_result: result || null
+        };
+        this.setCache(text, fallbackResult);
+        return fallbackResult;
+      }
+
+      // === Map & normalize result ===
+      const mapping = this.getCLD3ToLanguageToolMapping();
+      const ltCode = mapping[result.language] || this.config.fallbackLanguage;
+      const confidence = Number(result.probability ?? result.confidence ?? 0);
+
+      const detectionResult = {
+        detected_language: result.language,
+        confidence,
+        languagetool_code: ltCode,
+        reliable: result.is_reliable !== undefined ? result.is_reliable : (confidence > 0.7),
+        source: 'cld3',
+        detection_time_ms: detectionTime,
+        raw_result: result
+      };
+
+      if (this.config.logLevel === 'info' || this.config.logLevel === 'debug') {
+        console.log('=== FINAL DETECTION RESULT ===');
+        console.log(JSON.stringify(detectionResult, null, 2));
+      }
+
+      if (this.config.enableCache) {
+        this.setCache(text, detectionResult);
+        if (this.config.logLevel === 'debug') {
+          console.log('✅ Result cached');
+        }
+      }
+
       if (this.config.logLevel === 'info') {
-        console.log(`Pattern detected: ${preCheck.detected_language} -> ${preCheck.languagetool_code} (${(preCheck.confidence * 100).toFixed(1)}%, ${preCheck.source})`);
+        const reliable = detectionResult.reliable ? 'reliable' : 'unreliable';
+        console.log(`Detected: ${result.language} -> ${ltCode} (${(confidence * 100).toFixed(1)}%, ${reliable}, ${detectionTime}ms)`);
       }
-      this.setCache(text, preCheck);
-      return preCheck;
-    }
-    console.log('❌ No pattern matched, proceeding to CLD3...');
 
-    // === DEBUG: CLD3 initialization ===
-    if (!this.isInitialized) {
-      console.log('⚠️ CLD3 not initialized, initializing now...');
-      await this.initialize();
-    }
+      return detectionResult;
 
-    if (!this.cldInstance) {
-      throw new Error('CLD3 not initialized');
-    }
-    console.log('✅ CLD3 instance ready');
-    console.log('CLD3 config - minBytes:', this.config.minBytes, 'maxBytes:', this.config.maxBytes);
+    } catch (error) {
+      console.error('❌ Language detection error:', error.message);
+      if (error.stack) console.error(error.stack);
 
-    // === DEBUG: CLD3 detection ===
-    console.log('Calling CLD3.findLanguage()...');
-    const startTime = Date.now();
-    const result = this.cldInstance.findLanguage(text);
-    const detectionTime = Date.now() - startTime;
-    
-    console.log('=== CLD3 RAW RESULT ===');
-    console.log('Full result object:', JSON.stringify(result, null, 2));
-    console.log('result.language:', result?.language);
-    console.log('result.probability:', result?.probability);
-    console.log('result.is_reliable:', result?.is_reliable);
-    console.log('Detection time:', detectionTime, 'ms');
-
-    // === DEBUG: Result validation ===
-    if (!result || !result.language) {
-      console.log('⚠️ CLD3 returned invalid result - no language detected');
-      const fallbackResult = {
+      const errorResult = {
         detected_language: 'en',
         confidence: 0.5,
         languagetool_code: this.config.fallbackLanguage,
         reliable: false,
-        source: 'fallback-no-detection',
-        detection_time_ms: detectionTime
+        source: 'error-fallback',
+        error: error.message
       };
-      
-      this.setCache(text, fallbackResult);
-      console.log('Returning fallback result:', fallbackResult);
-      return fallbackResult;
+
+      return errorResult;
     }
-
-    // === DEBUG: Mapping ===
-    const mapping = this.getCLD3ToLanguageToolMapping();
-    const ltCode = mapping[result.language] || this.config.fallbackLanguage;
-    console.log('Language mapping:', result.language, '->', ltCode);
-
-    const detectionResult = {
-      detected_language: result.language,
-      confidence: result.probability || result.confidence || 0,
-      languagetool_code: ltCode,
-      reliable: result.is_reliable !== undefined ? result.is_reliable : true,
-      source: 'cld3',
-      detection_time_ms: detectionTime,
-      raw_result: result
-    };
-
-    console.log('=== FINAL DETECTION RESULT ===');
-    console.log(JSON.stringify(detectionResult, null, 2));
-
-    // === DEBUG: Low confidence check ===
-    if (detectionResult.confidence < 0.3) {
-      console.warn('⚠️ WARNING: Very low confidence detection!');
-      console.warn('Consider implementing fallback pattern matching for this text');
-    }
-
-    // Cache result
-    if (this.config.enableCache) {
-      this.setCache(text, detectionResult);
-      console.log('✅ Result cached');
-    }
-
-    // Logging
-    if (this.config.logLevel === 'info') {
-      const confidence = result.probability || result.confidence || 0;
-      const reliable = result.is_reliable !== undefined ? result.is_reliable : true;
-      console.log(`Detected: ${result.language} -> ${ltCode} (${(confidence * 100).toFixed(1)}%, ${reliable ? 'reliable' : 'unreliable'}, ${detectionTime}ms)`);
-    }
-
-    console.log('=== END DETECTION DEBUG ===\n');
-    return detectionResult;
-
-  } catch (error) {
-    console.error('❌ Language detection error:', error);
-    console.error('Error stack:', error.stack);
-    
-    const errorResult = {
-      detected_language: 'en',
-      confidence: 0.5,
-      languagetool_code: this.config.fallbackLanguage,
-      reliable: false,
-      source: 'error-fallback',
-      error: error.message
-    };
-
-    console.log('Returning error fallback:', errorResult);
-    return errorResult;
   }
-  }
+
   // ================== MULTIPLE LANGUAGE DETECTION ==================
   async detectMultipleLanguages(text, maxResults = 3) {
     try {
@@ -368,14 +366,15 @@ export class LanguageDetectionService {
 
       return results.map(result => ({
         detected_language: result.language,
-        confidence: result.probability || result.confidence || 0,
+        confidence: Number(result.probability ?? result.confidence ?? 0),
         languagetool_code: mapping[result.language] || this.config.fallbackLanguage,
         reliable: result.is_reliable !== undefined ? result.is_reliable : true,
-        source: 'cld3-multiple'
+        source: 'cld3-multiple',
+        raw_result: result
       }));
 
     } catch (error) {
-      console.error('Multiple language detection error:', error);
+      console.error('Multiple language detection error:', error.message);
       return [{
         detected_language: 'en',
         confidence: 0.5,

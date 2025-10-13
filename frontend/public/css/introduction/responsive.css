@@ -2,7 +2,6 @@
 
 /* Tablet và Mobile lớn (768px và nhỏ hơn) */
 @media (max-width: 768px) {
-    /* Hero Section */
     .hero h1 {
         font-size: 2.5rem;
     }
@@ -314,5 +313,179 @@
 
     .testimonial-card {
         padding: 15px;
+    }
+}
+
+/* ==========================================
+   RESPONSIVE CHO SIDEBAR VÀ HEADER
+   ========================================== */
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 280px;
+    }
+    
+    .page-content-wrapper.sidebar-open {
+        margin-left: 0;
+    }
+    
+    .page-content-wrapper.sidebar-open::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+    }
+
+    .sidebar-toggle {
+        margin-right: 10px;
+        min-width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+
+    nav {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+    }
+
+    nav ul {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+    }
+
+    .auth-buttons {
+        margin-left: 0;
+    }
+
+    .user-dropdown {
+        width: 260px;
+        right: -10px;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .user-avatar i:first-child {
+        font-size: 1.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .sidebar {
+        width: 250px;
+    }
+    
+    .sidebar-header h3 {
+        font-size: 1rem;
+    }
+    
+    .sidebar-item {
+        padding: 12px 15px;
+        font-size: 0.9rem;
+    }
+
+    .sidebar-toggle {
+        margin-right: 8px;
+        min-width: 35px;
+        height: 35px;
+        font-size: 1.1rem;
+        padding: 6px 8px;
+    }
+
+    .logo {
+        font-size: 1.5rem;
+    }
+
+    nav {
+        padding: 10px;
+    }
+
+    nav ul {
+        gap: 10px;
+    }
+
+    nav ul li a {
+        padding: 6px 10px;
+        font-size: 0.9rem;
+    }
+
+    .auth-buttons a {
+        padding: 8px 15px;
+        font-size: 0.9rem;
+    }
+}
+
+/* ==========================================
+   RESPONSIVE CHO MAIN CONTENT KHI CÓ SIDEBAR
+   ========================================== */
+
+@media (max-width: 768px) {
+    .main-wrapper {
+        padding-top: 80px;
+    }
+    
+    .hero {
+        padding: 60px 15px 40px;
+    }
+    
+    .section-content {
+        padding: 0 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-wrapper {
+        padding-top: 70px;
+    }
+    
+    .hero {
+        padding: 50px 10px 30px;
+    }
+    
+    .section-content {
+        padding: 0 10px;
+    }
+}
+
+/* ==========================================
+   RESPONSIVE CHO MODAL KHI CÓ SIDEBAR
+   ========================================== */
+
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 20px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .container {
+        flex-direction: column;
+    }
+    
+    .left-box {
+        min-height: 200px;
+    }
+    
+    .register-form {
+        padding: 30px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-content {
+        width: 98%;
+        margin: 10px;
+    }
+    
+    .register-form {
+        padding: 20px 15px;
     }
 }

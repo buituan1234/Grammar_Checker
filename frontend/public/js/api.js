@@ -4,7 +4,7 @@ class FrontendCache {
   constructor() {
     this.cache = new Map();
     this.maxSize = 100;
-    this.ttl = 10 * 60 * 1000; // 10 minutes
+    this.ttl = 10 * 60 * 1000; 
     setInterval(() => this.cleanExpired(), 5 * 60 * 1000);
   }
   generateKey(text, type, language = '') {
@@ -49,29 +49,10 @@ if (typeof window !== 'undefined') window.grammarCache = frontendCache;
 /* =========================
    Helpers
    ========================= */
-function getUserData() {
-  try {
-    let loggedData = localStorage.getItem("loggedInAs_user");
-    
-    if (!loggedData) {
-      loggedData = localStorage.getItem("loggedInAs_admin");
-    }
-    
-    if (!loggedData) {
-      loggedData = localStorage.getItem("loggedInAs");
-    }
-    
-    if (!loggedData) return null;
-    return JSON.parse(loggedData);
-  } catch (e) {
-    console.error('getUserData parse error', e);
-    return null;
-  }
-}
 
 export async function logUsageActivity(data) {
     try {
-        const userData = getUserData(); 
+        const userData = (typeof AuthManager !== 'undefined') ? AuthManager.getCurrentUser() : null;
         const payload = {
           user_id: userData?.userId ?? userData?.id ?? null,
           username: userData?.username ?? userData?.name ?? null,
@@ -114,7 +95,6 @@ export const fetchLanguages = async () => {
   try {
     const res = await fetch(`${API_BASE_URL}/grammar/languages`);
     const data = await safeJson(res) || {};
-    // Accept several shapes
     if (data?.success && data?.data?.languages) return data.data.languages;
     if (data?.languages) return data.languages;
     if (data?.data?.languagesList) return data.data.languagesList;
@@ -232,7 +212,6 @@ export const checkGrammar = async (text, language = 'auto', options = {}) => {
   const trimmed = text.trim();
   const useFastCheck = options.fast || false;
   
-  // Check cache (only if not forcing fresh check)
   if (!options.skipCache) {
     const cacheKey = frontendCache.generateKey(trimmed, 'grammar', language);
     const cached = frontendCache.get(cacheKey);
@@ -254,7 +233,6 @@ export const checkGrammar = async (text, language = 'auto', options = {}) => {
     
     const data = await safeJson(res) || {};
     
-    // Parse response (tolerant to different formats)
     let result = null;
     if (data.success && data.data) {
       result = data.data;
@@ -266,22 +244,16 @@ export const checkGrammar = async (text, language = 'auto', options = {}) => {
       result = data;
     }
     
-    // Add frontend timing if not present
     if (!result.performance) {
       result.performance = {
         frontend_time_ms: performance.now() - startTime
       };
     }
     
-    // Cache the result
     frontendCache.set(frontendCache.generateKey(trimmed, 'grammar', language), result);
     
-    // Log detection info if available
     if (result.language_detection) {
-      console.log(`🔍 Auto-detected: ${result.language_detection.detected_language} (${(result.language_detection.confidence * 100).toFixed(1)}%)`);
     }
-    
-    console.log(`✅ Grammar check: ${result.matches?.length || 0} issues found`);
     return result;
     
   } catch (err) {
@@ -383,8 +355,8 @@ export async function loginUser(username, password) {
 /** fetchUsers (admin) */
 export const fetchUsers = async () => {
   try {
-    const userData = getUserData();
-    if (!userData) throw new Error('Authentication required');
+    const userData = (typeof AuthManager !== 'undefined') ? AuthManager.getCurrentUser() : null;
+    if (!AuthManager.isAdmin) throw new Error('Authentication required');
     const res = await fetch(`${API_BASE_URL}/users/admin/users`, {
       method: 'GET', 
       headers: { 
@@ -406,7 +378,7 @@ export const fetchUsers = async () => {
 /** updateUser */
 export const updateUser = async (userId, userData) => {
   try {
-    const currentUser = getUserData();
+    const currentUser = AuthManager.getCurrentUser();
     if (!currentUser || currentUser.userRole !== 'admin') {
       return { success: false, error: 'Admin auth required' };
     }
@@ -433,7 +405,7 @@ export const updateUser = async (userId, userData) => {
 /** deleteUser */
 export const deleteUser = async (userId) => {
   try {
-    const currentUser = getUserData();
+    const currentUser = AuthManager.getCurrentUser();
     if (!currentUser || currentUser.userRole !== 'admin') {
       return { success: false, error: 'Admin auth required' };
     }

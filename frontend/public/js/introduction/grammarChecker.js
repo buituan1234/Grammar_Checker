@@ -1,82 +1,128 @@
-// grammarChecker.js - Logic kiểm tra ngữ pháp demo
+// grammarChecker.js - Xử lý hiển thị kết quả grammar check
 
-// Mock grammar errors for demo
-const DEMO_ERRORS = [
-    {
-        pattern: /there house/gi,
-        message: "Did you mean 'their house'?",
-        original: "there house",
-        suggestion: "their house",
-        type: "Grammar"
-    },
-    {
-        pattern: /alot/gi,
-        message: "Did you mean 'a lot'?",
-        original: "alot",
-        suggestion: "a lot", 
-        type: "Spelling"
-    },
-    {
-        pattern: /your welcome/gi,
-        message: "Did you mean 'you're welcome'?",
-        original: "your welcome",
-        suggestion: "you're welcome",
-        type: "Grammar"
-    }
-];
-
-// Find errors in text
-function findErrors(text) {
-    const errors = [];
+export function displayResults(matches, container) {
+    if (!container) return;
     
-    // Check for predefined errors
-    DEMO_ERRORS.forEach(errorDef => {
-        const matches = [...text.matchAll(errorDef.pattern)];
-        matches.forEach(match => {
-            errors.push({
-                message: errorDef.message,
-                original: errorDef.original,
-                suggestion: errorDef.suggestion,
-                type: errorDef.type,
-                offset: match.index
-            });
+    if (matches.length === 0) {
+        container.innerHTML = `
+            <div class="demo-no-errors">
+                <i class="fas fa-check-circle"></i>
+                <p>Great! No grammar issues found in your text.</p>
+            </div>
+        `;
+        
+        const acceptAllBtn = document.getElementById('demoAcceptAllBtn');
+        if (acceptAllBtn) acceptAllBtn.style.display = 'none';
+        
+        return;
+    }
+    
+    window.currentDemoMatches = matches;
+    
+    container.innerHTML = matches.map((match, index) => {
+        const errorText = match.context 
+            ? match.context.text.substring(
+                match.context.offset,
+                match.context.offset + match.context.length
+              )
+            : 'Unknown';
+        
+        const suggestion = match.replacements?.[0]?.value || '';
+        const errorType = match.rule?.category?.name || 'Grammar';
+        
+        return `
+            <div class="demo-error-item" data-error-index="${index}">
+                <div class="demo-error-type">${errorType}</div>
+                <div class="demo-error-message"><strong>Issue:</strong> ${match.message}</div>
+                <div class="demo-suggestion">
+                    <strong>Original:</strong> 
+                    <span style="background: #ffebee; padding: 2px 6px; border-radius: 3px; color: #c62828;">"${escapeHtml(errorText)}"</span> 
+                    → 
+                    <strong>Suggestion:</strong> 
+                    <span style="background: #e8f5e8; padding: 2px 6px; border-radius: 3px; color: #2e7d32;">"${suggestion || 'No suggestion'}"</span>
+                </div>
+                ${suggestion ? `
+                    <button class="demo-apply-btn" 
+                            data-index="${index}" 
+                            data-offset="${match.offset}" 
+                            data-length="${match.length}" 
+                            data-suggestion="${escapeHtml(suggestion)}">
+                        <i class="fas fa-check"></i> Apply
+                    </button>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+    
+    const acceptAllBtn = document.getElementById('demoAcceptAllBtn');
+    if (acceptAllBtn) acceptAllBtn.style.display = 'block';
+    
+    setupApplyButtons();
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function setupApplyButtons() {
+    document.querySelectorAll('.demo-apply-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const index = parseInt(this.dataset.index);
+            const offset = parseInt(this.dataset.offset);
+            const length = parseInt(this.dataset.length);
+            const suggestion = this.dataset.suggestion;
+            
+            applyDemoSuggestion(index, offset, length, suggestion);
         });
     });
-    
-    // Check for missing capitals at sentence start
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim());
-    sentences.forEach((sentence, index) => {
-        const trimmed = sentence.trim();
-        if (trimmed && trimmed[0] !== trimmed[0].toUpperCase()) {
-            errors.push({
-                message: "Sentence should start with a capital letter",
-                original: trimmed[0],
-                suggestion: trimmed[0].toUpperCase(),
-                type: "Capitalization",
-                offset: text.indexOf(trimmed)
-            });
-        }
-    });
-    
-    return errors;
 }
 
-// Simulate API call for grammar checking
-export async function performDemoGrammarCheck(text, language) {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+function applyDemoSuggestion(index, offset, length, suggestion) {
+    const demoText = document.getElementById('demoText');
+    if (!demoText) return;
     
-    const mockErrors = findErrors(text);
+    const text = demoText.value;
+    const newText = text.substring(0, offset) + suggestion + text.substring(offset + length);
+    demoText.value = newText;
     
-    return {
-        success: true,
-        data: {
-            matches: mockErrors,
-            text: text
-        }
-    };
+    const errorItem = document.querySelector(`[data-error-index="${index}"]`);
+    if (errorItem) {
+        errorItem.classList.add('removing');
+        setTimeout(() => {
+            errorItem.remove();
+            
+            const remainingErrors = document.querySelectorAll('.demo-error-item');
+            if (remainingErrors.length === 0) {
+                const demoErrorsList = document.getElementById('demoErrorsList');
+                if (demoErrorsList) {
+                    demoErrorsList.innerHTML = `
+                        <div class="demo-no-errors">
+                            <i class="fas fa-check-circle"></i>
+                            <p>All suggestions applied! Your text looks great.</p>
+                        </div>
+                    `;
+                }
+                
+                const acceptAllBtn = document.getElementById('demoAcceptAllBtn');
+                if (acceptAllBtn) acceptAllBtn.style.display = 'none';
+            }
+            
+            const issueCount = document.getElementById('demoIssueCount');
+            if (issueCount) {
+                issueCount.textContent = remainingErrors.length;
+            }
+        }, 300);
+    }
+    
+    updateTextStats(newText);
+    
+    if (window.currentDemoMatches) {
+        window.currentDemoMatches = window.currentDemoMatches.filter((_, i) => i !== index);
+    }
 }
 
-// Update text statistics
 export function updateTextStats(text) {
     const words = text.trim() ? text.trim().split(/\s+/).length : 0;
     const chars = text.length;
@@ -88,28 +134,4 @@ export function updateTextStats(text) {
     if (charCountEl) charCountEl.textContent = chars;
     
     return { words, chars };
-}
-
-// Display grammar check results
-export function displayResults(matches, container) {
-    if (!container) return;
-    
-    if (matches.length === 0) {
-        container.innerHTML = `
-            <div class="demo-no-errors">
-                🎉 Great! No grammar issues found in your text.
-            </div>
-        `;
-    } else {
-        container.innerHTML = matches.map((match, index) => `
-            <div class="demo-error-item">
-                <div class="demo-error-type">${match.type || 'Grammar'}</div>
-                <div class="demo-error-message"><strong>Issue:</strong> ${match.message}</div>
-                <div class="demo-suggestion">
-                    <strong>Original:</strong> <span style="background: #ffebee; padding: 2px 6px; border-radius: 3px; color: #c62828;">"${match.original}"</span> → 
-                    <strong>Suggestion:</strong> <span style="background: #e8f5e8; padding: 2px 6px; border-radius: 3px; color: #2e7d32;">"${match.suggestion}"</span>
-                </div>
-            </div>
-        `).join('');
-    }
 }

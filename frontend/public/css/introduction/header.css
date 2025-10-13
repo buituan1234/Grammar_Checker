@@ -7,7 +7,8 @@ header {
     position: fixed;
     width: 100%;
     top: 0;
-    z-index: 1000;
+    z-index: 1001;
+    transition: all 0.3s ease;
 }
 
 nav {
@@ -16,14 +17,46 @@ nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 20px;
+    padding: 15px 30px;
+    transition: all 0.3s ease;
+}
+
+/* Nav left - chứa toggle button và logo */
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Sidebar toggle button */
+.sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(102, 126, 234, 0.1);
+    border: 2px solid #667eea;
+    color: #667eea;
+    font-size: 1.3rem;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    min-width: 45px;
+    height: 45px;
+}
+
+.sidebar-toggle:hover {
+    background: #667eea;
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .logo {
     font-size: 1.8rem;
     font-weight: bold;
     color: var(--text-dark);
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    background: linear-gradient(135deg, #3498db, #8e44ad);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -38,8 +71,9 @@ nav {
 nav ul {
     list-style: none;
     display: flex;
-    gap: 20px;
+    gap: 15px; 
     align-items: center;
+    flex-wrap: nowrap;
 }
 
 nav ul li a {
@@ -47,11 +81,10 @@ nav ul li a {
     color: var(--text-dark);
     font-weight: 500;
     transition: var(--transition);
-    padding: 8px 12px;
+    padding: 8px 10px; 
     border-radius: var(--border-radius-small);
-    position: relative;
+    white-space: nowrap; 
 }
-
 nav ul li a:hover {
     color: var(--primary-color);
     background: rgba(52, 152, 219, 0.1);
@@ -60,28 +93,27 @@ nav ul li a:hover {
 
 .auth-buttons {
     display: flex;
-    gap: 10px;
-    margin-left: 20px;
+    gap: 8px; 
+    flex-shrink: 0; 
 }
-
 .auth-buttons a {
-    padding: 10px 20px;
+    padding: 10px 18px; 
     border-radius: 25px;
     font-weight: bold;
     transition: var(--transition);
     text-decoration: none;
-    margin-left: 10px;
+    white-space: nowrap;
 }
 
 .auth-buttons .login {
-    background: var(--primary-color);
+    background: #3498db;
     color: white;
-    border: 2px solid var(--primary-color);
+    border: 2px solid #3498db;
 }
 
 .auth-buttons .login:hover {
     background: transparent;
-    color: var(--primary-color);
+    color: #3498db;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
 }
@@ -97,4 +129,245 @@ nav ul li a:hover {
     color: var(--accent-color);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+/* User dropdown */
+.user-dropdown-container {
+    position: relative;
+}
+
+.user-dropdown-container.hidden {
+    display: none;
+}
+
+.user-avatar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    background: rgba(102, 126, 234, 0.1);
+    border: 2px solid #667eea;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.user-avatar:hover {
+    background: rgba(102, 126, 234, 0.2);
+    border-color: #764ba2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.user-avatar i:first-child {
+    font-size: 1.5rem;
+    color: #667eea;
+}
+
+.user-name {
+    color: #333;
+    font-weight: 600;
+    font-size: 0.95rem;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-avatar .fa-chevron-down {
+    font-size: 0.8rem;
+    color: #667eea;
+    transition: transform 0.3s ease;
+}
+
+.user-avatar.active .fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+.user-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 280px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+.user-dropdown:not(.hidden) {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.user-icon-large {
+    font-size: 2.5rem;
+    color: white;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.user-details strong {
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-details span {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: #e0e0e0;
+    margin: 0;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    color: #333;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.dropdown-item:hover {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+}
+
+.dropdown-item i {
+    font-size: 1.1rem;
+    width: 20px;
+    text-align: center;
+    color: #667eea;
+}
+
+.dropdown-item span {
+    flex: 1;
+}
+
+.logout-btn {
+    color: #e74c3c;
+    font-weight: 600;
+}
+
+.logout-btn:hover {
+    background: rgba(231, 76, 60, 0.1);
+    color: #c0392b;
+}
+
+.logout-btn i {
+    color: #e74c3c;
+}
+
+#authButtons.hidden,
+.auth-buttons.hidden {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1023px) {
+    nav {
+        padding: 15px 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    nav {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+    }
+
+    nav ul {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+    }
+
+    .user-dropdown {
+        width: 260px;
+        right: -10px;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .user-avatar i:first-child {
+        font-size: 1.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo {
+        font-size: 1.5rem;
+    }
+
+    nav {
+        padding: 10px;
+    }
+
+    nav ul li a {
+        padding: 6px 10px;
+        font-size: 0.9rem;
+    }
+
+    .auth-buttons a {
+        padding: 8px 15px;
+        font-size: 0.9rem;
+    }
+
+    .sidebar-toggle {
+        min-width: 35px;
+        height: 35px;
+        font-size: 1.1rem;
+        padding: 6px 8px;
+    }
+}
+
+@media (min-width: 1024px) {
+    header {
+        width: calc(100% - 260px);
+        left: 260px; 
+    }
 }

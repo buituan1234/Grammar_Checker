@@ -1,4 +1,4 @@
-// uiComponents.js - Các component và tương tác UI
+// uiComponents.js 
 
 import { isLoggedIn } from './utils.js';
 
@@ -46,15 +46,11 @@ export function initAccordion() {
         header.addEventListener('click', () => {
             const content = header.nextElementSibling;
             const isActive = header.classList.contains('active');
-            
-            // Close all other accordions
             accordionHeaders.forEach(h => {
                 h.classList.remove('active');
                 const c = h.nextElementSibling;
-                if (c) c.style.maxHeight = '0';
+                if (c) c.style.maxHeight = null;
             });
-            
-            // Toggle current accordion
             if (!isActive) {
                 header.classList.add('active');
                 if (content) {
@@ -75,7 +71,15 @@ export function updateButtonVisibility() {
     
     if (tryItFreeBtn) tryItFreeBtn.style.display = loggedIn ? 'none' : 'inline-block';
     if (upgradeAccountBtn) upgradeAccountBtn.style.display = loggedIn ? 'inline-block' : 'none';
-    if (authButtons) authButtons.style.display = loggedIn ? 'none' : 'flex';
+    if (authButtons) {
+    if (loggedIn) {
+        authButtons.classList.add('hidden');
+        authButtons.style.display = 'none';
+    } else {
+        authButtons.classList.remove('hidden');
+        authButtons.style.display = 'flex';
+    }
+}
 }
 
 // Add page transition effects
@@ -83,12 +87,10 @@ export function initPageTransitions() {
     const links = document.querySelectorAll('a[href]:not([href^="#"]):not([target="_blank"])');
     links.forEach(link => {
         link.addEventListener('click', (e) => {
-            if (link.onclick) return; // Skip if has custom onclick
+            if (link.onclick) return;
             
             e.preventDefault();
             const href = link.getAttribute('href');
-            
-            // Add fade out effect
             document.body.style.opacity = '0.7';
             document.body.style.transition = 'opacity 0.3s ease';
             

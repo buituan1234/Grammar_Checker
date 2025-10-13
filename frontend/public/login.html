@@ -38,10 +38,20 @@
       <!-- Right Form Section (Enhanced từ register-form) -->
       <div class="form-section">
         <div class="form-header">
-          <h2 class="form-title">Login</h2>
-          <p class="form-subtitle">Sign in to access your account</p>
-        </div>
+        <h2 class="form-title">Login</h2>
+        <p class="form-subtitle">Sign in to access your account</p>
+       </div>
 
+        <!-- ✅ THÊM VÀO ĐÂY -->
+      <div class="session-info-panel" id="sessionInfoPanel" style="display: none;">
+        <div class="session-badge">
+         <i class="fas fa-info-circle"></i>
+          <span>Tab ID: <strong id="currentTabId"></strong></span>
+        </div>
+      <div class="active-sessions" id="activeSessions">
+      <!-- Sẽ được điền bằng JS -->
+      </div>
+    </div>
         <form id="loginForm" class="auth-form">
           <!-- Username Field (giữ nguyên ID loginUsername cho JS) -->
           <div class="input-group">
@@ -129,7 +139,6 @@
       </div>
     </div>
 
-    <!-- Enhanced Background Decoration -->
     <div class="bg-decoration">
       <div class="bg-shape bg-shape-1"></div>
       <div class="bg-shape bg-shape-2"></div>
@@ -137,7 +146,7 @@
     </div>
   </div>
 
-  <!-- Scripts (giữ nguyên như dự án gốc) -->
+  <script src="js/authManager.js"></script>
   <script type="module" src="js/login.js"></script>
   <script type="module" src="js/utils.js"></script>
 </body>

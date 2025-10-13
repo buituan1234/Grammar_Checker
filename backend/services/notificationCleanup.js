@@ -42,7 +42,6 @@ export function startNotificationCleanup(dbPool) {
     console.log('Notification cleanup scheduler started');
     console.log('- Schedule: Daily at 2:00 AM (Vietnam time)');
 
-    // Optional: Run cleanup once on startup to clean existing old notifications
     setTimeout(async () => {
         try {
             console.log('Running initial notification cleanup...');

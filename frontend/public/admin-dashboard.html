@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard - Grammar Checker Analytics</title>
   
-  <!-- External CSS -->
   <link rel="stylesheet" href="css/admin/main.css">
   <link rel="stylesheet" href="css/admin/dashboard.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   
-  <!-- Chart.js CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>  
@@ -37,7 +35,6 @@
 
   <!-- Main Container -->
   <div class="container">
-    <!-- Dashboard Header -->
     <div class="dashboard-header">
       <h2 class="dashboard-title">
         <i class="fas fa-chart-bar"></i>
@@ -106,9 +103,7 @@
       </div>
     </div>
 
-    <!-- Charts Section -->
     <div class="charts-section">
-      <!-- Account Types Chart -->
       <div class="chart-container">
         <div class="chart-title">
           <i class="fas fa-chart-pie"></i>
@@ -119,7 +114,6 @@
         </div>
       </div>
 
-      <!-- Top Languages Chart -->
       <div class="chart-container">
         <div class="chart-title">
           <i class="fas fa-chart-bar"></i>
@@ -130,7 +124,6 @@
         </div>
       </div>
 
-      <!-- Traffic Timeline Chart -->
       <div class="chart-container full-width-chart">
         <div class="chart-title">
           <i class="fas fa-chart-line"></i>
@@ -162,13 +155,11 @@
     </div>
   </div>
 
-  <!-- Toast Notifications -->
   <div id="toastContainer" class="toast-container"></div>
-
-  <!-- External JavaScript -->
+  <script src="/js/authManager.js"></script>
   <script src="js/admin/admin-config.js"></script>
   <script src="js/admin/admin-utils.js"></script>
   <script src="js/admin/admin-api.js"></script>
-  <script src="js/admin/dashboard.js"></script>
+  <script src="js/admin/admin-dashboard.js"></script>
 </body>
 </html>

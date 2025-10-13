@@ -11,10 +11,8 @@ const AdminDebug = {
     console.log('=== Authentication Debug ===');
     console.log('Admin Storage Key:', CONFIG.ADMIN_STORAGE_KEY);
     console.log('User Storage Key:', CONFIG.USER_STORAGE_KEY);
-    console.log('Legacy Storage Key:', CONFIG.LEGACY_STORAGE_KEY);
     console.log('Raw Admin Storage:', localStorage.getItem(CONFIG.ADMIN_STORAGE_KEY));
     console.log('Raw User Storage:', localStorage.getItem(CONFIG.USER_STORAGE_KEY));
-    console.log('Raw Legacy Storage:', localStorage.getItem(CONFIG.LEGACY_STORAGE_KEY));
     console.log('Admin Token:', localStorage.getItem('admin_token'));
     console.log('Parsed User Data:', getUserData());
     console.log('Is Admin Panel:', isAdminPanel());
@@ -27,7 +25,6 @@ const AdminDebug = {
     console.log('Is Admin Panel:', isAdminPanel());
     console.log('Admin Storage:', localStorage.getItem(CONFIG.ADMIN_STORAGE_KEY));
     console.log('User Storage:', localStorage.getItem(CONFIG.USER_STORAGE_KEY));
-    console.log('Legacy Storage:', localStorage.getItem(CONFIG.LEGACY_STORAGE_KEY));
     console.log('Current User:', getUserData());
     console.log('Storage Key Function Test:', getStorageKey('admin'), getStorageKey('user'));
     console.log('====================');
@@ -94,26 +91,9 @@ const AdminDebug = {
   clearAllSessions() {
     localStorage.removeItem(CONFIG.ADMIN_STORAGE_KEY);
     localStorage.removeItem(CONFIG.USER_STORAGE_KEY);
-    localStorage.removeItem(CONFIG.LEGACY_STORAGE_KEY);
     localStorage.removeItem('admin_token');
     console.log('All sessions cleared');
     showToast('Debug', 'All sessions cleared', 'info', 2000);
-  },
-
-  // Set temporary admin data for testing
-  setTempAdminData() {
-    const tempAdminData = {
-      userId: 999,
-      username: 'debug_admin',
-      userRole: 'admin',
-      email: 'debug@admin.com',
-      loginTime: new Date().toISOString()
-    };
-    
-    localStorage.setItem(CONFIG.ADMIN_STORAGE_KEY, JSON.stringify(tempAdminData));
-    console.log('Temporary admin data set:', tempAdminData);
-    showToast('Debug', 'Temporary admin data set', 'info', 2000);
-    return tempAdminData;
   },
 
   // Test API endpoints
@@ -201,7 +181,6 @@ const AdminDebug = {
       storage: {
         adminStorage: localStorage.getItem(CONFIG.ADMIN_STORAGE_KEY),
         userStorage: localStorage.getItem(CONFIG.USER_STORAGE_KEY),
-        legacyStorage: localStorage.getItem(CONFIG.LEGACY_STORAGE_KEY),
         adminToken: localStorage.getItem('admin_token')
       },
       config: CONFIG,

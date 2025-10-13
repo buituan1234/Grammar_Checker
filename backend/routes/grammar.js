@@ -35,6 +35,7 @@ router.post('/detect', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Language detection failed:', error);
+    console.error('Error stack:', error.stack); // THÊM stack trace
     res.status(500).json({ 
       success: false, 
       error: error.message 
@@ -73,6 +74,7 @@ router.post('/detect-multiple', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Multiple language detection failed:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ 
       success: false, 
       error: error.message 
@@ -92,6 +94,7 @@ router.get('/languages', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Failed to fetch languages:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ 
       success: false, 
       error: error.message 
@@ -100,20 +103,72 @@ router.get('/languages', async (req, res) => {
 });
 
 /**
- * NEW: Health check endpoint
+ * NEW: Enhanced Health check endpoint
  */
 router.get('/health', async (req, res) => {
   try {
+    console.log('[HEALTH CHECK] Starting health check...');
+    
+    // Check LanguageTool service
     const health = await languageToolService.healthCheck();
+    console.log('[HEALTH CHECK] Result:', JSON.stringify(health, null, 2));
+    
     res.json({ 
       success: true, 
-      data: health 
+      data: health,
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('❌ Health check failed:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ 
       success: false, 
-      error: error.message 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * NEW: LanguageTool direct health check
+ */
+router.get('/languagetool-health', async (req, res) => {
+  const LANGUAGETOOL_URL = process.env.LANGUAGETOOL_API_URL || 'http://localhost:8081/v2';
+  const start = Date.now();
+  
+  try {
+    console.log(`[LT HEALTH] Checking LanguageTool at ${LANGUAGETOOL_URL}`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(`${LANGUAGETOOL_URL}/languages`, {
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    const elapsed = Date.now() - start;
+    
+    console.log(`[LT HEALTH] Response: ${response.status} in ${elapsed}ms`);
+    
+    res.json({
+      success: true,
+      status: response.ok ? 'healthy' : 'degraded',
+      response_time_ms: elapsed,
+      url: LANGUAGETOOL_URL,
+      http_status: response.status
+    });
+  } catch (error) {
+    const elapsed = Date.now() - start;
+    console.error(`[LT HEALTH] Failed in ${elapsed}ms:`, error.message);
+    
+    res.status(503).json({
+      success: false,
+      status: 'unhealthy',
+      error: error.message,
+      response_time_ms: elapsed,
+      url: LANGUAGETOOL_URL,
+      hint: error.name === 'AbortError' ? 'Timeout after 5s' : 'Connection failed'
     });
   }
 });
@@ -130,6 +185,7 @@ router.get('/detection-stats', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Failed to get detection stats:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ 
       success: false, 
       error: error.message 
@@ -138,11 +194,16 @@ router.get('/detection-stats', async (req, res) => {
 });
 
 /**
- * Check grammar: Cohere → Validate by LT → fallback LT if necessary
- * Updated to include language detection info in response
+ * Check grammar: Enhanced with better error handling and logging
  */
 router.post('/check', async (req, res) => {
   const { text, language = 'auto' } = req.body;
+
+  console.log('[GRAMMAR CHECK] Request received:', {
+    textLength: text?.length,
+    textPreview: text?.substring(0, 50),
+    language
+  });
 
   if (!text || typeof text !== 'string' || !text.trim()) {
     return res.status(400).json({ 
@@ -158,26 +219,40 @@ router.post('/check', async (req, res) => {
 
     // Auto-detect language if requested (now with CLD3)
     if (language === 'auto') {
-      const detectionStart = Date.now();
-      const detection = await languageToolService.detectLanguage(text);
-      normalizedLang = detection.language;
-      
-      detectionInfo = {
-        detected_language: detection.language,
-        confidence: detection.confidence,
-        reliable: detection.reliable,
-        source: detection.source,
-        detection_time_ms: Date.now() - detectionStart
-      };
+      try {
+        const detectionStart = Date.now();
+        const detection = await languageToolService.detectLanguage(text);
+        normalizedLang = detection.language;
+        
+        detectionInfo = {
+          detected_language: detection.language,
+          confidence: detection.confidence,
+          reliable: detection.reliable,
+          source: detection.source,
+          detection_time_ms: Date.now() - detectionStart
+        };
 
-      console.log(`🔍 Auto-detected language: ${normalizedLang} (${detection.source}, ${detectionInfo.detection_time_ms}ms, ${(detection.confidence * 100).toFixed(1)}%)`);
+        console.log(`[GRAMMAR CHECK] Auto-detected: ${normalizedLang} (${detection.source}, ${detectionInfo.detection_time_ms}ms, ${(detection.confidence * 100).toFixed(1)}%)`);
+      } catch (detectionError) {
+        console.error('[GRAMMAR CHECK] Detection failed:', detectionError);
+        // Fallback to English if detection fails
+        normalizedLang = 'en-US';
+        detectionInfo = {
+          detected_language: 'en-US',
+          confidence: 0.5,
+          reliable: false,
+          source: 'error-fallback',
+          error: detectionError.message
+        };
+      }
     }
 
     // Convert to LanguageTool compatible format
-    // If detected language is not supported by LT, fallback to 'en'
     if (normalizedLang === 'auto' || !normalizedLang) {
-      normalizedLang = 'en';
+      normalizedLang = 'en-US';
     }
+
+    console.log('[GRAMMAR CHECK] Using language:', normalizedLang);
 
     // Step 1: Use Cohere to detect suggestions (if available)
     let cohereMatches = [];
@@ -187,33 +262,42 @@ router.post('/check', async (req, res) => {
       const cohereStart = Date.now();
       try {
         cohereMatches = await fallbackCheckWithCohere(text);
-        console.log(`✅ Cohere returned ${cohereMatches.length} matches in ${Date.now() - cohereStart}ms`);
+        console.log(`[GRAMMAR CHECK] Cohere: ${cohereMatches.length} matches in ${Date.now() - cohereStart}ms`);
 
-        // Step 2: Validate Cohere's suggestions using LanguageTool
+        // Step 2: Validate Cohere's suggestions
         if (cohereMatches.length > 0) {
           validatedCohereMatches = await languageToolService.validateCohereSuggestions(text, cohereMatches);
           const validationTime = Date.now() - cohereStart;
-          console.log(`✅ LanguageTool validated ${validatedCohereMatches.length}/${cohereMatches.length} matches in ${validationTime}ms`);
+          console.log(`[GRAMMAR CHECK] Validated: ${validatedCohereMatches.length}/${cohereMatches.length} in ${validationTime}ms`);
         }
       } catch (cohereError) {
-        console.warn('⚠️ Cohere check failed, using LanguageTool only:', cohereError.message);
+        console.warn('[GRAMMAR CHECK] Cohere failed:', cohereError.message);
       }
+    } else {
+      console.log('[GRAMMAR CHECK] Cohere API key not configured, skipping');
     }
 
-    // Step 3: If Cohere didn't find anything or not available, use full LanguageTool check
+    // Step 3: Use LanguageTool
     let ltResult = { matches: [] };
 
     if (validatedCohereMatches.length === 0) {
+      console.log('[GRAMMAR CHECK] Calling LanguageTool...');
       const ltStart = Date.now();
-      ltResult = await languageToolService.checkGrammar(text, normalizedLang);
-      console.log(`✅ LanguageTool returned ${ltResult.matches.length} matches in ${Date.now() - ltStart}ms`);
+      
+      try {
+        ltResult = await languageToolService.checkGrammar(text, normalizedLang);
+        console.log(`[GRAMMAR CHECK] LanguageTool: ${ltResult.matches.length} matches in ${Date.now() - ltStart}ms`);
+      } catch (ltError) {
+        console.error('[GRAMMAR CHECK] LanguageTool failed:', ltError);
+        throw ltError; // Re-throw to be caught by outer catch
+      }
     } else {
-      console.log('⚠️ Skipping full LanguageTool check because Cohere found validated issues');
+      console.log('[GRAMMAR CHECK] Skipping LanguageTool (using Cohere results)');
     }
 
     const finalMatches = [...validatedCohereMatches];
 
-    // Merge additional LT suggestions (avoid duplicate offset-length)
+    // Merge additional LT suggestions
     if (ltResult?.matches?.length) {
       const existingOffsets = new Set(finalMatches.map(m => `${m.offset}-${m.length}`));
       for (const m of ltResult.matches) {
@@ -229,6 +313,7 @@ router.post('/check', async (req, res) => {
     }
 
     const totalTime = Date.now() - startTime;
+    console.log(`[GRAMMAR CHECK] Complete: ${finalMatches.length} final matches in ${totalTime}ms`);
 
     // Build enhanced response
     const response = {
@@ -246,7 +331,7 @@ router.post('/check', async (req, res) => {
       }
     };
 
-    // Add language detection info if auto-detection was used
+    // Add language detection info
     if (detectionInfo) {
       response.data.language_detection = detectionInfo;
     }
@@ -254,18 +339,27 @@ router.post('/check', async (req, res) => {
     return res.json(response);
 
   } catch (error) {
-    console.error('❌ Grammar check failed:', error);
-    res.status(500).json({ 
+    console.error('[GRAMMAR CHECK] ❌ FAILED:');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error name:', error.name);
+    
+    // Check if it's a LanguageTool specific error
+    if (error.statusCode) {
+      console.error('LanguageTool status code:', error.statusCode);
+      console.error('LanguageTool details:', error.details);
+    }
+
+    res.status(error.statusCode || 500).json({ 
       success: false, 
-      error: error.message,
-      details: error.details || null
+      error: error.message || 'Grammar check failed',
+      details: process.env.NODE_ENV !== 'production' ? error.stack : undefined
     });
   }
 });
 
 /**
- * NEW: Quick grammar check (LanguageTool only, no Cohere)
- * Useful for faster responses when Cohere validation is not needed
+ * NEW: Quick grammar check (LanguageTool only)
  */
 router.post('/check-fast', async (req, res) => {
   const { text, language = 'auto' } = req.body;
@@ -280,10 +374,12 @@ router.post('/check-fast', async (req, res) => {
   try {
     const startTime = Date.now();
     
-    // Check with LanguageTool (includes auto language detection via CLD3)
+    console.log('[FAST CHECK] Request:', { textLength: text.length, language });
+    
     const result = await languageToolService.checkGrammar(text, language);
     
     const totalTime = Date.now() - startTime;
+    console.log(`[FAST CHECK] Complete in ${totalTime}ms`);
 
     return res.json({
       success: true,
@@ -299,7 +395,8 @@ router.post('/check-fast', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Fast grammar check failed:', error);
+    console.error('[FAST CHECK] ❌ Failed:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ 
       success: false, 
       error: error.message 

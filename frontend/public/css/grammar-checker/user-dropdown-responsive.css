@@ -1,0 +1,118 @@
+/* ==========================================
+   USER DROPDOWN RESPONSIVE
+   ========================================== */
+
+/* Tablet and below */
+@media (max-width: 768px) {
+    .user-avatar {
+        padding: 6px 12px;
+    }
+
+    .user-name {
+        max-width: 80px;
+        font-size: 0.9rem;
+    }
+
+    .user-dropdown {
+        width: 260px;
+        right: -10px;
+    }
+
+    .dropdown-header {
+        padding: 15px;
+    }
+
+    .user-icon-large {
+        font-size: 2rem;
+    }
+
+    .user-details strong {
+        font-size: 0.95rem;
+    }
+
+    .user-details span {
+        font-size: 0.8rem;
+    }
+
+    .dropdown-item {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+
+    .notification-dropdown {
+        right: 10px;
+        width: 280px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .user-avatar {
+        padding: 6px 10px;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .user-avatar .fa-chevron-down {
+        display: none;
+    }
+
+    .user-avatar i.fa-user-circle {
+        font-size: 2rem;
+    }
+
+    .user-dropdown {
+        width: 240px;
+        right: -15px;
+    }
+
+    .dropdown-header {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .user-icon-large {
+        font-size: 1.8rem;
+    }
+
+    .dropdown-item {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+
+    .dropdown-item i {
+        font-size: 1rem;
+    }
+
+    .notification-dropdown {
+        right: 0;
+        width: 260px;
+    }
+
+    .header-title {
+        font-size: 1.2rem;
+    }
+
+    .nav-menu {
+        display: none;
+    }
+}
+
+@media (max-width: 360px) {
+    .user-dropdown {
+        width: calc(100vw - 40px);
+        right: -20px;
+    }
+
+    .header-right {
+        gap: var(--space-2);
+    }
+}
+
+@media (min-width: 1200px) {
+    .user-dropdown {
+        width: 300px;
+    }
+}

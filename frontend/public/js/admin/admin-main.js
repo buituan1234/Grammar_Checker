@@ -1,8 +1,3 @@
-/**
- * admin-main.js
- * Main initialization and entry point
- */
-
 'use strict';
 
 // Main admin panel initialization
@@ -10,21 +5,26 @@ const AdminMain = {
   async init() {
     try {
       log('Initializing Enhanced Admin Panel v8.0.0 (Complete Modular System)...');
-        if (!validateAuthentication()) {
+      
+      if (!validateAuthentication()) {
         return;
       }
+      
       initializeElements();
       initializeEventListeners();
       setupInputFixes();
       setupPasswordToggle();
-      const userData = getUserData();
+      
+      const userData = AuthManager.getCurrentUser();
       if (userData && elements.adminUsername) {
         elements.adminUsername.textContent = userData.username || 'admin';
       }
+      
       await loadUsers();
       if (userData) {
         showToast('Admin Panel Ready', `Welcome ${userData.username}! Complete modular system loaded.`, 'success', 3000);
       }
+      
       this.setupAutoRefresh();
       
       log('Enhanced admin panel initialization complete');
@@ -35,6 +35,23 @@ const AdminMain = {
     }
   },
 
+  setupDevelopmentMode() {
+    if (CONFIG.DEBUG_MODE) {
+      console.log('🛠️ Development Mode Enabled');
+      console.log('Debug commands:', {
+        'd.auth()': 'Debug authentication',
+        'd.storage()': 'Debug localStorage',
+        'd.form()': 'Debug form state',
+        'd.state()': 'Debug app state',
+        'd.clear()': 'Clear all sessions',
+        'd.temp()': 'Set temp admin data',
+        'd.export()': 'Export debug data',
+        'd.api()': 'Test API endpoints',
+        'd.perf()': 'Monitor performance'
+      });
+    }
+  },
+  
   // Setup auto-refresh functionality
   setupAutoRefresh() {
     if (CONFIG.AUTO_REFRESH_INTERVAL > 0) {
@@ -104,7 +121,6 @@ const AdminMain = {
     log('CSS animations added');
   },
 
-  // Setup legacy globals for backward compatibility
   setupLegacyGlobals() {
     window.AdminPanel = {
       init: this.init.bind(this),
@@ -131,7 +147,6 @@ const AdminMain = {
     log('Legacy globals setup for backward compatibility');
   },
 
-  // Handle page unload
   cleanup() {
     if (AppState.autoRefreshTimer) {
       clearInterval(AppState.autoRefreshTimer);
@@ -145,50 +160,15 @@ const AdminMain = {
     
     log('Admin panel cleanup completed');
   },
-
-  // Development mode setup
-  setupDevelopmentMode() {
-    if (CONFIG.DEBUG_MODE || window.location.hostname === 'localhost') {
-      // Add development helpers
-      window.dev = {
-        loadMockData: () => {
-          const mockUsers = [
-            { id: 1, username: 'admin', fullName: 'System Admin', email: 'admin@test.com', role: 'admin', accountType: 'plus', status: 'active' },
-            { id: 2, username: 'user1', fullName: 'Test User 1', email: 'user1@test.com', role: 'user', accountType: 'free', status: 'active' },
-            { id: 3, username: 'user2', fullName: 'Test User 2', email: 'user2@test.com', role: 'user', accountType: 'plus', status: 'inactive' }
-          ];
-          AdminState.setUsers(mockUsers);
-          updateStatistics();
-          renderUserTable();
-          showToast('Development', 'Mock data loaded', 'info', 2000);
-        },
-        
-        resetApp: () => {
-          AdminState.setUsers([]);
-          updateStatistics();
-          renderUserTable();
-          showToast('Development', 'App state reset', 'info', 2000);
-        },
-        
-        testToasts: () => {
-          showToast('Success', 'This is a success message', 'success', 3000);
-          setTimeout(() => showToast('Error', 'This is an error message', 'error', 3000), 500);
-          setTimeout(() => showToast('Warning', 'This is a warning message', 'warning', 3000), 1000);
-          setTimeout(() => showToast('Info', 'This is an info message', 'info', 3000), 1500);
-        },
-        
-        simulateError: () => {
-          throw new Error('Simulated error for testing');
-        }
-      };
-      
-      console.log('Development mode enabled. Use window.dev for dev helpers:', window.dev);
-    }
-  }
 };
 
-// Initialize when DOM is loaded
 function initializeAdminPanel() {
+  if (typeof AuthManager === 'undefined') {
+    console.error('❌ CRITICAL: AuthManager not loaded! Cannot initialize admin panel.');
+    alert('Authentication system failed to load. Please refresh the page.');
+    return;
+  }
+  
   AdminMain.addCSSAnimations();
   AdminMain.setupLegacyGlobals();
   AdminMain.setupDevelopmentMode();
@@ -196,19 +176,16 @@ function initializeAdminPanel() {
   window.addEventListener('beforeunload', AdminMain.cleanup);
 }
 
-// Auto-start based on document ready state
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeAdminPanel);
 } else {
   initializeAdminPanel();
 }
 
-// Global export
 if (typeof window !== 'undefined') {
   window.AdminMain = AdminMain;
 }
 
-// Final initialization log
 log('Admin panel main script loaded successfully', { 
   version: '8.0.0', 
   features: [

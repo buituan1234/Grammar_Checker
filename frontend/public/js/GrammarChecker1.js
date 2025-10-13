@@ -1,5 +1,4 @@
-// GrammarChecker1.js - With Language Validation
-import { SectionManager } from './sectionManager.js';
+// GrammarChecker1.js - Updated with new user dropdown
 import { checkGrammar, detectLanguage, logUsageActivity } from './api.js'; 
 import { showCustomAlert } from './utils.js';
 import { NotificationManager } from './notifications.js';
@@ -14,37 +13,12 @@ const LANGUAGE_NAMES = {
   'vi': 'Vietnamese', 'th': 'Thai', 'be': 'Belarusian', 'bg': 'Bulgarian', 'sr': 'Serbian'
 };
 
-// Language code mapping for comparison (expanded)
 const LANGUAGE_CODE_MAP = {
-  'en-US': 'en',
-  'en': 'en',
-  'ja-JP': 'ja',
-  'ja': 'ja',
-  'zh-CN': 'zh',
-  'zh': 'zh',
-  'ru-RU': 'ru',
-  'ru': 'ru',
-  'uk-UA': 'uk',  
-  'uk': 'uk',
-  'de-DE': 'de',
-  'de': 'de',
-  'fr': 'fr',
-  'es': 'es',
-  'it': 'it',
-  'pt': 'pt',
-  'vi': 'vi',
-  'ko': 'ko',
-  'ar': 'ar',
-  'nl': 'nl',
-  'pl-PL': 'pl',
-  'pl': 'pl',
-  'sv': 'sv',
-  'da-DK': 'da',
-  'da': 'da',
-  'th': 'th',
-  'be': 'be', 
-  'bg': 'bg',  
-  'sr': 'sr'   
+  'en-US': 'en', 'en': 'en', 'ja-JP': 'ja', 'ja': 'ja', 'zh-CN': 'zh', 'zh': 'zh',
+  'ru-RU': 'ru', 'ru': 'ru', 'uk-UA': 'uk', 'uk': 'uk', 'de-DE': 'de', 'de': 'de',
+  'fr': 'fr', 'es': 'es', 'it': 'it', 'pt': 'pt', 'vi': 'vi', 'ko': 'ko',
+  'ar': 'ar', 'nl': 'nl', 'pl-PL': 'pl', 'pl': 'pl', 'sv': 'sv',
+  'da-DK': 'da', 'da': 'da', 'th': 'th', 'be': 'be', 'bg': 'bg', 'sr': 'sr'
 };
 
 function getLanguageName(code) {
@@ -55,7 +29,69 @@ function normalizeLanguageCode(code) {
   return LANGUAGE_CODE_MAP[code] || code;
 }
 
-let currentUser = null;
+// ==================== USER DROPDOWN SETUP ====================
+
+function setupUserDropdown() {
+  const userAvatarToggle = document.getElementById('userAvatarToggle');
+  const userDropdown = document.getElementById('userDropdown');
+  
+  if (!userAvatarToggle || !userDropdown) {
+    console.warn('User dropdown elements not found');
+    return;
+  }
+  
+  userAvatarToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userDropdown.classList.toggle('hidden');
+    userAvatarToggle.classList.toggle('active');
+  });
+  
+  document.addEventListener('click', (e) => {
+    if (!userAvatarToggle.contains(e.target) && !userDropdown.contains(e.target)) {
+      userDropdown.classList.add('hidden');
+      userAvatarToggle.classList.remove('active');
+    }
+  });
+}
+
+function populateUserInfo(userData) {
+  if (!userData) return;
+  
+  const headerUsername = document.getElementById('headerUsername');
+  const dropdownUsername = document.getElementById('dropdownUsername');
+  const dropdownEmail = document.getElementById('dropdownEmail');
+  const username = userData.username || userData.name || 'User';
+  const email = userData.email || 'user@example.com';
+  
+  if (headerUsername) headerUsername.textContent = username;
+  if (dropdownUsername) dropdownUsername.textContent = username;
+  if (dropdownEmail) dropdownEmail.textContent = email;
+  
+  console.log('User info populated:', username);
+}
+
+function setupLogout() {
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    if (!logoutBtn) {
+        console.warn('Logout button not found');
+        return;
+    }
+    
+    logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        
+        if (AuthManager.logout()) {
+            showCustomAlert('Logged out successfully', 'success', 1500);
+            
+            setTimeout(() => {
+                window.location.href = '/introduction.html';
+            }, 1000);
+        }
+    });
+}
+
+// ==================== NOTIFICATIONS ====================
 
 async function initializeNotifications(user) {
   if (!user || !user.userId) {
@@ -87,21 +123,30 @@ async function initializeNotifications(user) {
   }
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  function getLoggedInUser() {
-    let userData = localStorage.getItem("loggedInAs_user") || localStorage.getItem("loggedInAs_admin");
-    if (!userData) {
-      userData = localStorage.getItem("loggedInAs");
-    }
-    return userData ? JSON.parse(userData) : null;
-  }
+// ==================== GRAMMAR CHECKER LOGIC ====================
 
-  const loggedInUser = getLoggedInUser();
+document.addEventListener("DOMContentLoaded", async () => {
+    if (!AuthManager.validatePageAccess()) {
+        return;
+    }
+    
+    const currentUser = AuthManager.getCurrentUser();
+    
+    if (!currentUser) {
+        console.error('Failed to get user data');
+        window.location.href = '/login.html?redirect=/GrammarChecker1.html';
+        return;
+    }
+
+  populateUserInfo(currentUser);
+  setupUserDropdown();
+  setupLogout();
+
+  // DOM Elements
   const textInput = document.getElementById('textInput');
   const languageSelect = document.getElementById('languageSelect');
   const checkGrammarBtn = document.getElementById('checkGrammarBtn');
   const highlightedTextDiv = document.getElementById('highlightedText');
-  const suggestionsPanel = document.getElementById('suggestionsPanel');
   const suggestionsList = document.getElementById('suggestionsList');
   const wordCountSpan = document.getElementById('wordCount');
   const charCountSpan = document.getElementById('charCount');
@@ -109,66 +154,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const successMessageDiv = document.getElementById('successMessage');
   const errorMessageDiv = document.getElementById('errorMessage');
   const acceptAllBtn = document.getElementById('acceptAllBtn');
-  const statsContainer = document.getElementById('statsContainer');
   const noSuggestionsDiv = document.querySelector('.no-suggestions');
 
-  const dropdownUsername = document.getElementById('dropdownUsername');
-  const dropdownEmail = document.getElementById('dropdownEmail');
-
-  const sectionManager = new SectionManager();
-  console.log('Section Manager initialized');
-
-  if (loggedInUser) {
-    dropdownUsername.textContent = loggedInUser.username || 'Unknown';
-    dropdownEmail.textContent = loggedInUser.email || 'guest@example.com';
-    currentUser = loggedInUser;
-    await initializeNotifications(loggedInUser);
-  }
-
-  const settingsBtn = document.getElementById('settingsToggleBtn');
-  const userDropdown = document.getElementById('userDropdown');
-  
-  settingsBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const rect = settingsBtn.getBoundingClientRect();
-    const dropdown = userDropdown;
-    
-    if (dropdown.classList.contains('show')) {
-      dropdown.classList.remove('show');
-    } else {
-      dropdown.style.top = `${rect.bottom + 8}px`;
-      dropdown.style.right = `${window.innerWidth - rect.right}px`;
-      dropdown.classList.add('show');
-    }
-  });
-  
-  document.addEventListener('click', (e) => {
-    if (!userDropdown.contains(e.target) && !settingsBtn.contains(e.target)) {
-      userDropdown.classList.remove('show');
-    }
-  });
-  
-  window.addEventListener('resize', () => {
-    if (userDropdown.classList.contains('show')) {
-      const rect = settingsBtn.getBoundingClientRect();
-      userDropdown.style.top = `${rect.bottom + 8}px`;
-      userDropdown.style.right = `${window.innerWidth - rect.right}px`;
-    }
-  });
-
-  document.querySelector('.logout-btn')?.addEventListener('click', () => {
-    localStorage.removeItem("loggedInAs");
-    localStorage.removeItem("loggedInAs_user");
-    localStorage.removeItem("loggedInAs_admin");
-    localStorage.removeItem("lastGrammarMatches");
-    
-    currentUser = null;
-    if (window.notificationManager) {
-      window.notificationManager = null;
-    }
-    
-    window.location.href = 'login.html?message=logout_success';
-  });
+  // ==================== UTILITY FUNCTIONS ====================
 
   function getFreeUsageCount() {
     return parseInt(localStorage.getItem("freeUsageCount") || "0");
@@ -253,16 +241,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const errorText = match.context?.text?.slice(match.context.offset, match.context.offset + match.context.length) || 'Unknown';
     const firstReplacement = match.replacements?.[0]?.value || '';
     const errorType = getErrorTypeClass(match);
-    const source = match.source || 'languagetool';
     
     const li = document.createElement('li');
     li.className = 'suggestion-item';
     li.innerHTML = `
       <div class="suggestion-header">
         <div class="suggestion-error">${errorType}</div>
-        <div class="suggestion-source" title="Detection source">${source}</div>
       </div>
-      <div class="suggestion-message">${escapeHtml(match.message)}</div>
+      <div class="suggestion-message">${escapeHtml(match.message_en || match.message)}</div>
       <div class="suggestion-actions">
         ${firstReplacement ? `<span class="suggestion-fix">${escapeHtml(errorText)} → ${escapeHtml(firstReplacement)}</span>` : '<em>No suggestions available</em>'}
         ${firstReplacement ? `<button class="suggestion-apply-btn" data-error-index="${index}" data-replacement="${escapeHtml(firstReplacement)}">Apply</button>` : ''}
@@ -285,7 +271,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     matches.forEach((match, index) => {
       html += escapeHtml(text.slice(lastIndex, match.offset));
       const errorText = text.slice(match.offset, match.offset + match.length);
-      html += `<span class="grammar-error" data-error-index="${index}" title="${escapeHtml(match.message)}">${escapeHtml(errorText)}</span>`;
+      html += `<span class="grammar-error" data-error-index="${index}" title="${escapeHtml(match.message_en || match.message)}">${escapeHtml(errorText)}</span>`;
       lastIndex = match.offset + match.length;
 
       const suggestionItem = createSuggestionItem(match, index);
@@ -428,7 +414,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     
-    if (!loggedInUser?.userId && getFreeUsageCount() >= 3) {
+    if (!currentUser?.userId && getFreeUsageCount() >= 3) {
       showMessage(errorMessageDiv, 'You have used all 3 free grammar checks. Please log in to continue.', 'error');
       return showLoginModal();
     }
@@ -436,31 +422,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     showLoading(true);
     
     try {
-      const japanesePattern = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/; 
-      const chinesePattern = /[\u4E00-\u9FFF]/; 
+      const hiraganaPattern = /[\u3040-\u309F]/;
+      const katakanaPattern = /[\u30A0-\u30FF]/;
       const koreanPattern = /[\uAC00-\uD7AF\u1100-\u11FF]/; 
       const arabicPattern = /[\u0600-\u06FF\u0750-\u077F]/; 
       const cyrillicPattern = /[\u0400-\u04FF]/; 
       const thaiPattern = /[\u0E00-\u0E7F]/; 
-      
-      let preDetectedLang = null;
-      
-      if (japanesePattern.test(text)) {
-        preDetectedLang = 'ja-JP';
-        console.log('Pre-detected Japanese by Unicode range');
-      } else if (koreanPattern.test(text)) {
-        preDetectedLang = 'ko';
-        console.log('Pre-detected Korean by Unicode range');
-      } else if (thaiPattern.test(text)) {
-        preDetectedLang = 'th';
-        console.log('Pre-detected Thai by Unicode range');
-      } else if (arabicPattern.test(text)) {
-        preDetectedLang = 'ar';
-        console.log('Pre-detected Arabic by Unicode range');
-      } else if (cyrillicPattern.test(text)) {
-        preDetectedLang = 'ru-RU';
-        console.log('Pre-detected Cyrillic (Russian) by Unicode range');
-      }
+  
+  let preDetectedLang = null;
+  
+    // ✅ Japanese: CHỈ khi có Hiragana HOẶC Katakana
+    if (hiraganaPattern.test(text) || katakanaPattern.test(text)) {
+      preDetectedLang = 'ja-JP';
+      console.log('Pre-detected Japanese by Hiragana/Katakana');
+    } else if (koreanPattern.test(text)) {
+      preDetectedLang = 'ko';
+      console.log('Pre-detected Korean by Hangul');
+    } else if (thaiPattern.test(text)) {
+      preDetectedLang = 'th';
+      console.log('Pre-detected Thai by Unicode range');
+    } else if (arabicPattern.test(text)) {
+      preDetectedLang = 'ar';
+      console.log('Pre-detected Arabic by Unicode range');
+    } else if (cyrillicPattern.test(text)) {
+      preDetectedLang = 'ru-RU';
+      console.log('Pre-detected Cyrillic (Russian) by Unicode range');
+    }
       
       let detectionInfo;
       if (preDetectedLang) {
@@ -508,7 +495,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           'error'
         );
         
-        // Highlight the language selector to draw attention
         languageSelect.style.border = '2px solid #dc3545';
         setTimeout(() => {
           languageSelect.style.border = '';
@@ -522,7 +508,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
       
-      if (!loggedInUser?.userId) incrementFreeUsageCount();
+      if (!currentUser?.userId) incrementFreeUsageCount();
 
       console.log(`Language validation passed. Checking grammar...`);
       const result = await checkGrammar(text, selectedLang);
@@ -530,7 +516,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       localStorage.setItem('lastGrammarMatches', JSON.stringify(matches));
 
-      if (loggedInUser?.userId) {
+      if (currentUser?.userId) {
         await logUsageActivity({
           action: 'grammar_check',
           language: selectedLang,
@@ -592,7 +578,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     acceptAllBtn?.classList.add('hidden');
   });
 
-  // Initialize
   populateLanguages();
   updateStats();
   
@@ -605,4 +590,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       </div>
     `;
   }
+  
+  console.log('Grammar Checker fully initialized');
 });

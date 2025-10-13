@@ -22,5 +22,6 @@
 @import 'utilities-animations.css';
 
 /* 7. Responsive */
+@import url('user-dropdown-responsive.css');
 @import 'responsive.css';
 

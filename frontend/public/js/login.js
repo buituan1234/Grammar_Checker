@@ -58,17 +58,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const message = urlParams.get('message');
 
-    // 👁️ Enhanced toggle password functionality
+    // Setup password toggle buttons
     document.querySelectorAll('.toggle-password').forEach(btn => {
-    btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        togglePassword(this.querySelector('i'));
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            togglePassword(this.querySelector('i'));
         });
     });
 
-    // Show message if exists in URL params
+    // Handle URL messages
     if (message === 'registration_success') {
         showCustomAlert("Registration successful! Please log in.", 'success');
         displaySuccess('loginSuccess', 'Registration successful! Please log in.');
@@ -76,9 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (message === 'login_required') {
         showCustomAlert("Please log in to access the grammar checker.", 'info');
         history.replaceState({}, document.title, window.location.pathname);
+    } else if (message === 'admin_required') {
+        showCustomAlert("Admin access required. Please log in as administrator.", 'warning');
+        history.replaceState({}, document.title, window.location.pathname);
     }
 
-    // Enhanced animation for page transition
+    // Handle animation parameter
     const animateParam = urlParams.get('animate');
     if (animateParam === 'left') {
         const authContainer = document.querySelector('.auth-container');
@@ -88,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
         history.replaceState({}, document.title, window.location.pathname);
     }
 
-    // Enhanced form validation
+    // Form validation
     function validateLoginForm() {
         let isValid = true;
         
@@ -133,7 +135,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Enhanced form submission
+    // Check if already logged in (using original AuthManager)
+    if (window.AuthManager && AuthManager.isLoggedIn()) {
+        const currentUser = AuthManager.getCurrentUser();
+        console.log('👤 Already logged in (Tab ID: ' + currentUser._tabId + '):', currentUser.username);
+        
+        // Show info and redirect
+        showCustomAlert(`Already logged in as ${currentUser.username}. Redirecting...`, 'info');
+        
+        setTimeout(() => {
+            const redirectTo = currentUser.userRole === 'admin' ? '/admin.html' : '/introduction.html';
+            window.location.href = redirectTo;
+        }, 1500);
+        
+        return; // Don't setup form if already logged in
+    }
+
+    // Handle form submission
     if (loginForm) {
         loginForm.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -155,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("Login API response:", response);
 
                 if (response.success && response.userId) {
+                    // Prepare user data for AuthManager
                     const userToStore = {
                         userId: response.userId,
                         username: response.username,
@@ -163,23 +182,38 @@ document.addEventListener('DOMContentLoaded', () => {
                         userRole: response.userRole
                     };
 
-                    const storageKey = userToStore.userRole === 'admin' ? 'loggedInAs_admin' : 'loggedInAs_user';
-                    localStorage.setItem(storageKey, JSON.stringify(userToStore));
-
-                    await logUsageActivity({
-                    action: 'login',
-                    language: null,
-                    details: { 
-                     login_method: 'username_password',
-                     user_role: userToStore.userRole 
+                    // Login through AuthManager (creates session for this tab)
+                    AuthManager.login(userToStore);
+                    
+                    // Get the tab ID that was assigned
+                    const tabId = AuthManager.getTabId();
+                    console.log('✅ Login successful on Tab ID:', tabId);
+                    
+                    // Log usage activity
+                    try {
+                        await logUsageActivity({
+                            action: 'login',
+                            language: null,
+                            details: { 
+                                login_method: 'username_password',
+                                user_role: userToStore.userRole,
+                                tab_id: tabId
+                            }
+                        });
+                    } catch (activityError) {
+                        console.warn('Failed to log activity:', activityError);
+                        // Don't block login if activity logging fails
                     }
-                    });
+
+                    // Show success message
                     showCustomAlert("Login successful! Redirecting...", 'success');
                     displaySuccess('loginSuccess', 'Login successful! Redirecting...');
 
+                    // Determine redirect destination
                     const redirectTo = urlParams.get('redirect') ||
-                        (userToStore.userRole === 'admin' ? '/admin.html' : '/GrammarChecker1.html');
+                        (userToStore.userRole === 'admin' ? '/admin.html' : '/introduction.html');
 
+                    // Animate out
                     setTimeout(() => {
                         const authContainer = document.querySelector('.auth-container');
                         if (authContainer) {
@@ -189,9 +223,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }, 1000);
 
+                    // Redirect
                     setTimeout(() => {
                         window.location.href = redirectTo;
                     }, 1500);
+
                 } else {
                     const errorMessage = response.error || 'Login failed. Invalid credentials or missing user data from server.';
                     displayError('loginGeneralError', errorMessage);
@@ -209,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Social login handlers
     document.querySelectorAll('.social-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -217,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Form switching with animation
     const switchFormLinks = document.querySelectorAll('.switch-form-link');
     switchFormLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -238,6 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
+    // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             document.activeElement?.blur();
@@ -252,6 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Auto-focus first empty field
     setTimeout(() => {
         if (!usernameInput?.value) {
             usernameInput?.focus();
@@ -259,4 +299,34 @@ document.addEventListener('DOMContentLoaded', () => {
             passwordInput?.focus();
         }
     }, 100);
+
+    // Listen for auth events from AuthManager (Multi-Session)
+    window.addEventListener('auth-login', (event) => {
+        const { user, tabId } = event.detail;
+        console.log('📢 Auth Event - Login:', user.username, 'Tab:', tabId);
+    });
+
+    window.addEventListener('auth-logout', (event) => {
+        const { user, tabId } = event.detail;
+        console.log('📢 Auth Event - Logout:', user?.username, 'Tab:', tabId);
+    });
+
+    window.addEventListener('auth-logout-all', (event) => {
+        console.log('📢 Auth Event - Logout All Tabs');
+    });
+
+    // Debug: Show session info in console (development only)
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('🔍 Debug - All Sessions:', AuthManager.getSessionsInfo());
+        console.log('📊 Debug - Active Tab ID:', AuthManager.getTabId());
+        
+        // Show active sessions count
+        const sessionsInfo = AuthManager.getSessionsInfo();
+        if (sessionsInfo.length > 0) {
+            console.log(`ℹ️ There are ${sessionsInfo.length} active session(s):`);
+            sessionsInfo.forEach((session, index) => {
+                console.log(`  ${index + 1}. ${session.username} (${session.userRole}) - ${session.isCurrent ? 'CURRENT TAB' : 'Other Tab'}`);
+            });
+        }
+    }
 });

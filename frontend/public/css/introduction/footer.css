@@ -2,17 +2,17 @@
 
 /* Footer */
 .footer {
-    background: linear-gradient(135deg, var(--text-dark), #34495e);
+    background: #2c3e50;
     color: white;
-    padding: 60px 20px 30px;
+    padding: 60px 40px 30px; 
 }
 
 .footer-container {
     max-width: 1200px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 40px;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
 }
 
 .footer-left h3, 
@@ -128,4 +128,10 @@
     opacity: 0.8;
     font-size: 0.85rem;
     line-height: 1.4;
+}
+
+@media (min-width: 1024px) {
+    .footer {
+        padding: 60px 60px 30px;
+    }
 }

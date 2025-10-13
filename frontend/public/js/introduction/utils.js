@@ -1,44 +1,19 @@
 // utils.js 
 
 // Toast notification system
-export function showToast(message, type = 'success', duration = 4000) {
+export function showToast(message, type = 'success', duration = 5000) {
     const existingToasts = document.querySelectorAll('.toast');
     existingToasts.forEach(toast => toast.remove());
     
     const toast = document.createElement('div');
     toast.className = `toast show ${type}`;
-    toast.innerHTML = `<span id="toastMessage">${message}</span>`;
-    
-    const colors = {
-        error: '#e74c3c',
-        info: '#3498db',
-        success: '#27ae60'
-    };
-    
-    toast.style.backgroundColor = colors[type] || colors.success;
-    toast.style.cssText += `
-        position: fixed;
-        bottom: 30px;
-        right: 30px;
-        color: white;
-        padding: 16px 20px;
-        border-radius: 8px;
-        font-size: 16px;
-        z-index: 9999;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        min-width: 300px;
-        text-align: center;
-        visibility: visible;
-        opacity: 1;
-        transform: translateX(0);
-    `;
+    toast.textContent = message;
     
     document.body.appendChild(toast);
     
-    setTimeout(() => {
+    const hideTimeout = setTimeout(() => {
         if (toast.parentNode) {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(100%)';
+            toast.classList.remove('show');
             setTimeout(() => {
                 if (toast.parentNode) {
                     toast.parentNode.removeChild(toast);
@@ -46,6 +21,16 @@ export function showToast(message, type = 'success', duration = 4000) {
             }, 300);
         }
     }, duration);
+    
+    toast.addEventListener('click', () => {
+        clearTimeout(hideTimeout);
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    });
 }
 
 export function showLoading(show = true) {
@@ -74,5 +59,8 @@ export function debounce(func, wait) {
 
 // Check if user is logged in
 export function isLoggedIn() {
-    return localStorage.getItem('loggedInAs') !== null;
+    return !!(
+        localStorage.getItem('loggedInAs_user') ||
+        localStorage.getItem('loggedInAs_admin') 
+    );
 }

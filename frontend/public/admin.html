@@ -5,13 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin - Grammar Checker Management</title>
   
-  <!-- External CSS -->
   <link rel="stylesheet" href="css/admin/main.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 </head>
 <body>  
-  <!-- Header -->
   <header class="header">
     <div class="header-content">
       <div class="header-left">
@@ -29,13 +27,11 @@
 
   <!-- Main Container -->
   <div class="container">
-    <!-- Debug Info -->
     <div id="debugInfo" class="debug-info" style="display: none;">
       <strong>🔍 Debug Information:</strong>
       <div id="debugContent"></div>
     </div>
 
-    <!-- Statistics Cards -->
     <div class="stats">
       <div class="stat-card">
         <div class="stat-number" id="totalUsers">-</div>
@@ -51,7 +47,6 @@
       </div>
     </div>
 
-    <!-- Admin Panel -->
     <div class="admin-panel">
       <div class="panel-header">
         <h2 class="panel-title">User Management</h2>
@@ -65,12 +60,10 @@
       </div>
       
       <div class="table-container">
-        <!-- Search Input -->
         <div class="search-container">
           <input type="text" id="searchInput" placeholder="Search by username or email...">
         </div>
         
-        <!-- Users Table -->
         <table>
         <thead>
           <tr>
@@ -100,7 +93,6 @@
     </div>
   </div>
 
-  <!-- Add/Edit User Modal -->
   <div id="userModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -111,34 +103,29 @@
         <form id="userForm" novalidate>
           <input type="hidden" id="editUserId">
           
-          <!-- Username Field - REMOVED required attribute -->
           <div class="form-group">
             <label for="username">Username <span class="required">*</span></label>
               <input type="text" id="username" name="username" autocomplete="username" data-required="true">
             <div id="usernameError" class="error-text"></div>
           </div>
           
-          <!-- Email Field - REMOVED required attribute -->
           <div class="form-group">
             <label for="email">Email <span class="required">*</span></label>
             <input type="email" id="email" name="email" autocomplete="email" data-required="true">
             <div id="emailError" class="error-text"></div>
           </div>
           
-          <!-- Phone Field -->
           <div class="form-group">
             <label for="phone">Phone</label>
             <input type="tel" id="phone" name="phone" autocomplete="tel">
           </div>
 
-          <!-- Full Name - REMOVED required attribute -->
           <div class="form-group">
             <label for="fullName">Full Name <span class="required">*</span></label>
             <input type="text" id="fullName" name="name" autocomplete="name" data-required="true" />
             <div id="fullNameError" class="error-text"></div>
           </div>
 
-          <!-- Password Field - REMOVED required attribute -->
           <div class="form-group">
             <label for="password">Password <span id="passwordRequired">*</span></label>
             <div class="password-wrapper">
@@ -151,11 +138,9 @@
             <small id="passwordHint" style="display:none; color: #666;">Leave blank to keep current password</small>
           </div>
           
-          <!-- Account Settings - Only show for edit mode -->
           <div id="accountSettings" class="account-settings" style="display: none;">
             <h4 class="settings-title">Account Settings</h4>
             
-            <!-- Account Status Toggle -->
             <div class="form-group">
               <div class="checkbox-group">
                 <label class="checkbox-label">
@@ -169,7 +154,6 @@
               </div>
             </div>
 
-            <!-- Account Type Toggle -->
             <div class="form-group">
               <div class="checkbox-group">
                 <label class="checkbox-label">
@@ -183,7 +167,6 @@
               </div>
             </div>
 
-            <!-- Role Selection - Admin only -->
             <div class="form-group" id="roleSelection" style="display: none;">
               <div class="checkbox-group">
                 <label class="checkbox-label">
@@ -198,10 +181,8 @@
             </div>
           </div>
           
-          <!-- Form Error -->
           <div id="formError" class="error-text"></div>
           
-          <!-- Form Actions -->
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
             <button type="submit" class="btn btn-success" id="saveBtn">
@@ -214,7 +195,6 @@
     </div>
   </div>
 
-  <!-- Quick Toggle Modal for Status Changes -->
   <div id="quickToggleModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -225,7 +205,6 @@
         <div class="quick-toggle-info">
           <p>Change status for: <strong id="quickToggleUsername">-</strong></p>
           <div id="quickToggleOptions" class="quick-toggle-options">
-            <!-- Options will be populated by JavaScript -->
           </div>
         </div>
         
@@ -240,7 +219,6 @@
     </div>
   </div>
 
-  <!-- Loading Indicator -->
   <div id="loadingOverlay" class="loading-overlay" style="display: none;">
     <div class="loading-spinner">
       <div class="spinner"></div>
@@ -248,21 +226,19 @@
     </div>
   </div>
 
-  <!-- Toast Notifications -->
   <div id="toastContainer" class="toast-container"></div>
-
-  <!-- External JavaScript -->
-  <script src="js/admin/admin-config.js"></script>
-  <script src="js/admin/admin-state.js"></script>
-  <script src="js/admin/admin-utils.js"></script>
-  <script src="js/admin/admin-storage.js"></script>
-  <script src="js/admin/admin-auth.js"></script>
-  <script src="js/admin/admin-api.js"></script>
-  <script src="js/admin/admin-ui.js"></script>
-  <script src="js/admin/admin-forms.js"></script>
-  <script src="js/admin/admin-modals.js"></script>
-  <script src="js/admin/admin-events.js"></script>
-  <script src="js/admin/admin-debug.js"></script>
-  <script src="js/admin/admin-main.js"></script>
+    <script src="js/authManager.js"></script>
+    <script src="js/admin/admin-config.js"></script>
+    <script src="js/admin/admin-storage.js"></script>
+    <script src="js/admin/admin-utils.js"></script>
+    <script src="js/admin/admin-debug.js"></script>
+    <script src="js/admin/admin-auth.js"></script>
+    <script src="js/admin/admin-state.js"></script>
+    <script src="js/admin/admin-ui.js"></script>
+    <script src="js/admin/admin-api.js"></script>
+    <script src="js/admin/admin-forms.js"></script>
+    <script src="js/admin/admin-modals.js"></script>
+    <script src="js/admin/admin-events.js"></script>
+    <script src="js/admin/admin-main.js"></script>
 </body>
 </html>

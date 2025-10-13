@@ -16,18 +16,9 @@
         <div class="header-content">
           <div class="header-left">
             <img src="images/Logo.jpg" class="inner-logo" alt="Inner Logo" />
-            <h1 class="header-title">🚀 Grammar Checker</h1>
+            <h1 class="header-title">Grammar Checker</h1>
           </div>
           <div class="header-right">
-            <nav class="nav-menu">
-              <a href="#" class="nav-link active" data-section="grammar">Grammar</a>
-              <a href="#" class="nav-link" data-section="about">About</a>
-              <a href="#" class="nav-link" data-section="features">Features</a>
-              <a href="#" class="nav-link" data-section="testimonials">Testimonials</a>
-              <a href="#" class="nav-link" data-section="faq">FAQ</a>
-              <a href="#" class="nav-link" data-section="contact">Contact</a>
-            </nav>
-
             <div class="notification-icon">
               <i class="fas fa-bell"></i>
             </div>
@@ -41,15 +32,31 @@
             </div>
 
             <div class="avatar-container">
-              <div class="avatar" id="settingsToggleBtn">
-                <i class="fas fa-cog"></i>
+              <div class="user-avatar" id="userAvatarToggle">
+                <i class="fas fa-user-circle"></i>
+                <span class="user-name" id="headerUsername">User</span>
+                <i class="fas fa-chevron-down"></i>
               </div>
-              <div class="dropdown" id="userDropdown">
-                <div class="user-info">
-                  <p><strong>Username:</strong> <span id="dropdownUsername">Guest</span></p>
-                  <p><strong>Email:</strong> <span id="dropdownEmail">guest@example.com</span></p>
+              <div class="user-dropdown hidden" id="userDropdown">
+                <div class="dropdown-header">
+                  <i class="fas fa-user-circle user-icon-large"></i>
+                  <div class="user-details">
+                    <strong id="dropdownUsername">Guest</strong>
+                    <span id="dropdownEmail">guest@example.com</span>
+                  </div>
                 </div>
-                <button class="logout-btn btn btn-outline">Logout</button>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-items">
+                  <a href="introduction.html" class="dropdown-item">
+                    <i class="fas fa-home"></i>
+                    <span>Back to Home</span>
+                  </a>
+                </div>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item logout-btn" id="logoutBtn">
+                  <i class="fas fa-sign-out-alt"></i>
+                  <span>Logout</span>
+                </button>
               </div>
             </div>
           </div>
@@ -217,8 +224,8 @@ This is where you can type or paste your text. The AI will analyze and provide s
           <div class="section-content">
             <h2>Contact Us</h2>
             <div class="contact-info">
-              <p>📞 Phone: <a href="tel:01223456789">01223456789</a></p>
-              <p>📧 Email: <a href="mailto:tuan@gmail.com">tuan@gmail.com</a></p>
+              <p>Phone: <a href="tel:01223456789">01223456789</a></p>
+              <p>Email: <a href="mailto:tuan@gmail.com">tuan@gmail.com</a></p>
               <div class="social-links">
                 <a href="https://www.facebook.com/" target="_blank">
                   <i class="fab fa-facebook"></i> Facebook
@@ -251,6 +258,7 @@ This is where you can type or paste your text. The AI will analyze and provide s
   </div>
 
   <!-- Keep existing scripts -->
+  <script src="js/authManager.js"></script>
   <script type="module" src="js/GrammarChecker1.js"></script>
   <script type="module" src="js/utils.js"></script>
   <script type="module" src="js/notifications.js"></script>

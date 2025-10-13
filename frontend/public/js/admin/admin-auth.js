@@ -1,32 +1,10 @@
-/**
- * admin-auth.js
- * Authentication and authorization functions
- */
-
 'use strict';
 
 // Authentication management
 const AdminAuth = {
   validateAuthentication() {
-    const userData = getUserData();
-    
-    if (!userData) {
-      log('No authentication data found', null, 'warn');
-      
-      if (isAdminPanel()) {
-        showToast('Admin Access Required', 'Please login with admin credentials to access this panel', 'error', 3000);
-      } else {
-        showToast('Authentication Required', 'Please login to access this page', 'error', 3000);
-      }
-      
-      setTimeout(() => {
-        window.location.href = 'login.html';
-      }, 3000);
-      return false;
-    }
-    
-    if (isAdminPanel() && userData.userRole.toLowerCase() !== 'admin') {
-      log('Non-admin user trying to access admin panel', userData, 'error');
+    if (!AuthManager.canAccessAdminPanel()) {
+      log('Admin access required', null, 'warn');
       showToast('Access Denied', 'Admin privileges required for this panel', 'error', 3000);
       setTimeout(() => {
         window.location.href = 'login.html';
@@ -34,7 +12,8 @@ const AdminAuth = {
       return false;
     }
     
-    log('Authentication validated successfully', { 
+    const userData = AuthManager.getCurrentUser();
+    log('Admin authentication validated successfully', { 
       userRole: userData.userRole, 
       username: userData.username,
       isAdminPanel: isAdminPanel()
@@ -44,7 +23,7 @@ const AdminAuth = {
 
   // Make authenticated API request
   async makeAuthenticatedRequest(url, options = {}) {
-    const userData = getUserData();
+    const userData = AuthManager.getCurrentUser();
     
     if (!userData) {
       log('No user data available for authentication', null, 'error');
@@ -79,8 +58,7 @@ const AdminAuth = {
     
     log(`Making authenticated API request to: ${url}`, { 
       method: options.method || 'GET', 
-      userRole: userData.userRole,
-      storageKey: getStorageKey(userData.userRole)
+      userRole: userData.userRole
     });
     
     try {
@@ -94,9 +72,7 @@ const AdminAuth = {
           throw new Error(data.error || 'Access denied. Insufficient privileges.');
         }
         if (response.status === 401) {
-          // Clear appropriate storage
-          const storageKey = getStorageKey(userData.userRole);
-          localStorage.removeItem(storageKey);
+          AuthManager.logout();
           localStorage.removeItem('admin_token');
           throw new Error('Authentication expired. Please login again.');
         }
@@ -110,7 +86,6 @@ const AdminAuth = {
     }
   },
 
-  // Login user with role-based storage
   loginUser(loginResponse) {
     try {
       const userData = {
@@ -122,17 +97,14 @@ const AdminAuth = {
         fullName: loginResponse.fullName || loginResponse.user?.fullName || loginResponse.name
       };
       
-      // Validate required fields
       if (!userData.userId || !userData.username || !userData.userRole) {
         throw new Error('Incomplete login data received');
       }
       
-      // Store with appropriate key
-      const storedData = setUserData(userData);
+      const storedData = AuthManager.login(userData);
       
       log(`User logged in with role: ${userData.userRole}`, storedData);
       
-      // Redirect based on role
       if (userData.userRole === 'admin') {
         window.location.href = 'admin.html';
       } else {
@@ -148,22 +120,22 @@ const AdminAuth = {
 
   // Logout with proper cleanup
   logout() {
-    const userData = getUserData();
-    const userRole = userData?.userRole || 'unknown';
+    const userData = AuthManager.getCurrentUser();
+    
+    if (!userData) {
+      console.warn('No user to logout');
+      window.location.href = 'login.html';
+      return;
+    }
+    
+    const userRole = userData.userRole || 'unknown';
     
     if (confirm(`Are you sure you want to logout?`)) {
       log(`${userRole} user logging out`);
       
-      // Clear appropriate storage
-      if (userData) {
-        const storageKey = getStorageKey(userData.userRole);
-        localStorage.removeItem(storageKey);
-      }
-      
-      // Clear tokens
+      AuthManager.logout();
       localStorage.removeItem('admin_token');
       
-      // Clear any other session data
       if (AppState?.autoRefreshTimer) {
         clearInterval(AppState.autoRefreshTimer);
       }
@@ -186,13 +158,11 @@ async function makeAPICall(endpoint, method = 'GET', data = null) {
     }
   };
   
-  // Add authentication headers
-  const userData = getUserData();
+  const userData = AuthManager.getCurrentUser();
   if (userData) {
     config.headers['x-user-role'] = userData.userRole;
   }
   
-  // Add admin token if available (for backward compatibility)
   const token = localStorage.getItem('admin_token');
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
@@ -232,7 +202,6 @@ function handleLogout() {
   AdminAuth.logout();
 }
 
-// Global exports
 if (typeof window !== 'undefined') {
   window.AdminAuth = AdminAuth;
   window.validateAuthentication = validateAuthentication;
@@ -240,4 +209,9 @@ if (typeof window !== 'undefined') {
   window.makeAPICall = makeAPICall;
   window.handleLogout = handleLogout;
   window.loginUser = AdminAuth.loginUser;
+  
+  // Chỉ gọi nếu function tồn tại
+  if (typeof AuthManager.setupLogoutSync === 'function') {
+    AuthManager.setupLogoutSync();
+  }
 }

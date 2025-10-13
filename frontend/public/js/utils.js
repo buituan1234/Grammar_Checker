@@ -1,11 +1,5 @@
 // frontend/public/js/utils.js
 
-/**
- * Displays a custom alert message on the screen.
- * @param {string} message 
- * @param {string} type 
- * @param {number} duration 
- */
 export function showCustomAlert(message, type = 'info', duration = 3000) {
     const existingAlert = document.getElementById('customAlert');
     if (existingAlert) {
@@ -67,6 +61,12 @@ export function showCustomAlert(message, type = 'info', duration = 3000) {
     }, duration);
 }
 
+export function getUserData() {
+    if (typeof AuthManager !== 'undefined' && AuthManager.getCurrentUser) {
+        return AuthManager.getCurrentUser();
+    }
+    return null;
+}
 
 /**
  * Toggles visibility of a password input field when eye icon is clicked.

@@ -200,13 +200,11 @@ const AdminEvents = {
         }
       }
       
-      // Ctrl/Cmd + N: Add new user
       if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
         e.preventDefault();
         showAddUserModal();
       }
       
-      // Escape: Close modals
       if (e.key === 'Escape') {
         if (elements.userModal?.classList.contains('show')) {
           hideUserModal();
@@ -228,11 +226,9 @@ const AdminEvents = {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Setting up dashboard button event listener');
     
     const dashboardBtn = document.getElementById('dashboardBtn');
     if (dashboardBtn) {
-        console.log('Dashboard button found, adding event listener');
         dashboardBtn.addEventListener('click', function(e) {
             console.log('Dashboard button clicked - redirecting...');
             e.preventDefault();
@@ -247,7 +243,6 @@ document.addEventListener('DOMContentLoaded', function() {
 setTimeout(function() {
     const dashboardBtn = document.getElementById('dashboardBtn');
     if (dashboardBtn && !dashboardBtn.hasAttribute('data-listener-added')) {
-        console.log('Adding backup dashboard listener');
         dashboardBtn.setAttribute('data-listener-added', 'true');
         dashboardBtn.addEventListener('click', function(e) {
             console.log('Backup dashboard listener triggered');

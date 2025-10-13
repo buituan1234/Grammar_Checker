@@ -1,6 +1,6 @@
 {
   "name": "grammar-checker-ai",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "description": "AI-powered grammar checker using LanguageTool API",
   "main": "backend/server.js",
@@ -22,13 +22,13 @@
     "nodejs",
     "express"
   ],
-  "author": "Your Team",
+  "author": "Bui Tuan",
   "license": "MIT",
   "dependencies": {
     "@openai/agents": "^0.0.15",
     "bcrypt": "^5.1.1",
     "bootstrap": "^5.3.0",
-    "cld3-asm": "^4.0.0",
+    "cld3-asm": "^1.0.1",
     "cohere-ai": "^7.18.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",

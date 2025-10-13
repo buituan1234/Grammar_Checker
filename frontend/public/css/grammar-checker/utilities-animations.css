@@ -103,3 +103,75 @@
 .highlighted-text-display::-webkit-scrollbar-thumb:hover {
     background: var(--gray-400);
 }
+
+/* ===== USER DROPDOWN UTILITIES ===== */
+
+.visible {
+    display: block !important;
+}
+
+/* Smooth transitions for all elements */
+* {
+    box-sizing: border-box;
+}
+
+/* Remove transition for specific elements */
+.no-transition {
+    transition: none !important;
+}
+
+/* Dropdown animation */
+.dropdown-animation-enter {
+    animation: dropdownSlideIn 0.3s ease-out;
+}
+
+.dropdown-animation-leave {
+    animation: dropdownSlideOut 0.3s ease-out;
+}
+
+@keyframes dropdownSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes dropdownSlideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+/* User avatar pulse effect on notification */
+.user-avatar.has-notification::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    background: #e74c3c;
+    border-radius: 50%;
+    border: 2px solid white;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
