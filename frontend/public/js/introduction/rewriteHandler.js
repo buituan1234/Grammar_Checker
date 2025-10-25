@@ -5,10 +5,7 @@ import { resetBodyOpacity } from './uiComponents.js';
 // ========== SHOW/HIDE SECTIONS ==========
 
 function showRewriteSection() {
-    // CRITICAL FIX: Reset body opacity immediately using helper
     resetBodyOpacity();
-    
-    // Force hide all overlays
     const loadingOverlay = document.getElementById('loadingOverlay');
     if (loadingOverlay) {
         loadingOverlay.style.display = 'none';
@@ -18,48 +15,30 @@ function showRewriteSection() {
     if (usageLimitModal) {
         usageLimitModal.style.display = 'none';
     }
-    
-    // Ẩn ONLY hero section (thay thế bằng rewrite section)
     const heroSection = document.getElementById('home');
     if (heroSection) {
         heroSection.style.display = 'none';
     }
-
-    // GIỮ NGUYÊN các section khác (about, features, testimonials, faq, contact)
-    // KHÔNG ẩn chúng nữa!
-
-    // Hiển thị rewrite section với FLEX để thay thế hero
     const rewriteSection = document.getElementById('rewrite-section');
     if (rewriteSection) {
         rewriteSection.style.display = 'flex';
-        
-        // Scroll to top để thấy rewrite section
-        setTimeout(() => {
+                setTimeout(() => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 100);
     }
 }
 
 function hideRewriteSection() {
-    // CRITICAL FIX: Reset body opacity when going back
     resetBodyOpacity();
     
-    // Hiển thị lại hero section (thay thế rewrite section)
     const heroSection = document.getElementById('home');
     if (heroSection) {
         heroSection.style.display = 'flex';
     }
-
-    // GIỮ NGUYÊN các section khác - không cần hiển thị lại vì chúng không bị ẩn
-    // Sections about, features, testimonials, faq vẫn ở đó!
-
-    // Ẩn rewrite section
     const rewriteSection = document.getElementById('rewrite-section');
     if (rewriteSection) {
         rewriteSection.style.display = 'none';
     }
-
-    // Reset form
     const rewriteText = document.getElementById('rewriteText');
     const rewriteResults = document.getElementById('rewriteResults');
     const charCount = document.getElementById('rewriteCharCount');
@@ -69,8 +48,6 @@ function hideRewriteSection() {
     if (rewriteResults) rewriteResults.style.display = 'none';
     if (charCount) charCount.textContent = '0';
     if (wordCount) wordCount.textContent = '0';
-
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -82,8 +59,6 @@ async function rewriteText() {
     const rewriteBtn = document.getElementById('rewriteBtn');
     const resultsDiv = document.getElementById('rewriteResults');
     const resultsContent = document.getElementById('rewriteResultsContent');
-
-    // Validate input
     if (!textInput) {
         showToast('Please enter text to rewrite', 'error');
         return;
@@ -95,13 +70,10 @@ async function rewriteText() {
     }
 
     try {
-        // Disable button and show loading
         if (rewriteBtn) {
             rewriteBtn.disabled = true;
             rewriteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rewriting...';
         }
-
-        // Call API
         const response = await fetch('/api/rewrite', {
             method: 'POST',
             headers: {
@@ -114,27 +86,21 @@ async function rewriteText() {
         });
 
         const result = await response.json();
-
-        // Re-enable button
         if (rewriteBtn) {
             rewriteBtn.disabled = false;
             rewriteBtn.innerHTML = '<i class="fas fa-pen-fancy"></i> Rewrite Text';
         }
 
         if (result.success && result.data?.rewritten) {
-            // Display results
             if (resultsContent) {
                 resultsContent.textContent = result.data.rewritten;
             }
             if (resultsDiv) {
                 resultsDiv.style.display = 'block';
-                // Smooth scroll to results
                 setTimeout(() => {
                     resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }, 100);
             }
-
-            // Show toast
             showToast('Rewrite completed successfully!', 'success');
         } else {
             showToast('Error: ' + (result.error || 'Failed to rewrite text'), 'error');
@@ -143,8 +109,6 @@ async function rewriteText() {
     } catch (err) {
         console.error('Rewrite error:', err);
         showToast('Request failed: ' + err.message, 'error');
-
-        // Re-enable button
         if (rewriteBtn) {
             rewriteBtn.disabled = false;
             rewriteBtn.innerHTML = '<i class="fas fa-pen-fancy"></i> Rewrite Text';
@@ -188,7 +152,6 @@ function resetRewriteForm() {
 // ========== EVENT LISTENERS ==========
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Rewrite with AI button (from sidebar)
     const rewriteWithAIBtn = document.getElementById('rewriteWithAIBtn');
     if (rewriteWithAIBtn) {
         rewriteWithAIBtn.addEventListener('click', (e) => {
@@ -196,8 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showRewriteSection();
         });
     }
-
-    // Back button in rewrite section
     const backFromRewriteBtn = document.getElementById('backFromRewriteBtn');
     if (backFromRewriteBtn) {
         backFromRewriteBtn.addEventListener('click', (e) => {
@@ -205,8 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
             hideRewriteSection();
         });
     }
-
-    // Rewrite button
     const rewriteBtn = document.getElementById('rewriteBtn');
     if (rewriteBtn) {
         rewriteBtn.addEventListener('click', (e) => {
@@ -214,8 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
             rewriteText();
         });
     }
-
-    // New rewrite button
     const newRewriteBtn = document.getElementById('newRewriteBtn');
     if (newRewriteBtn) {
         newRewriteBtn.addEventListener('click', (e) => {
@@ -227,7 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Textarea features
     const rewriteTextarea = document.getElementById('rewriteText');
     if (rewriteTextarea) {
-        // Allow Ctrl+Enter to trigger rewrite
         rewriteTextarea.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'Enter') {
                 e.preventDefault();
@@ -235,7 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Real-time character and word count
         rewriteTextarea.addEventListener('input', (e) => {
             const charCount = document.getElementById('rewriteCharCount');
             const wordCount = document.getElementById('rewriteWordCount');
@@ -272,10 +227,7 @@ function showToast(message, type = 'info') {
         toastMessage.textContent = message;
     }
 
-    // Remove old classes
     toast.classList.remove('success', 'error', 'info');
-    
-    // Add new type class
     toast.classList.add(type);
     toast.classList.add('show');
 
@@ -284,5 +236,4 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// Export functions
 export { showRewriteSection, hideRewriteSection, rewriteText, copyRewriteResult, resetRewriteForm };

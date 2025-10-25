@@ -111,7 +111,6 @@
   white-space: nowrap; 
 }
 
-/* TOGGLE BUTTON */
 .sidebar-toggle {
   display: inline-flex;
   align-items: center;
@@ -136,7 +135,6 @@
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-/* Scrollbar */
 .sidebar::-webkit-scrollbar {
   width: 6px;
 }
@@ -154,7 +152,6 @@
   background: rgba(255, 255, 255, 0.5);
 }
 
-/* MOBILE & TABLET */
 @media (max-width: 1023px) {
   .sidebar {
     width: 280px;
@@ -164,7 +161,6 @@
     margin-left: 0;
   }
   
-  /* Overlay backdrop */
   .page-content-wrapper.sidebar-open::before {
     content: '';
     position: fixed;

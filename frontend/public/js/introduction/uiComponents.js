@@ -87,24 +87,21 @@ export function initPageTransitions() {
     const links = document.querySelectorAll('a[href]:not([href^="#"]):not([target="_blank"])');
     links.forEach(link => {
         link.addEventListener('click', (e) => {
-            // Skip if link has onclick handler
             if (link.onclick) return;
             
             const href = link.getAttribute('href');
             
-            // CRITICAL FIX: Skip internal navigation links and void links
             if (!href || 
                 href === '#' || 
                 href.startsWith('#') || 
                 href === 'javascript:void(0)' ||
                 href === 'javascript:void(0);' ||
-                link.id === 'rewriteWithAIBtn' ||  // Skip rewrite button
-                link.closest('#sidebar')  // Skip all sidebar links
+                link.id === 'rewriteWithAIBtn' ||  
+                link.closest('#sidebar')  
             ) {
-                return;  // Don't apply fade effect
+                return;  
             }
             
-            // Only apply fade effect for actual page navigation
             e.preventDefault();
             document.body.style.opacity = '0.7';
             document.body.style.transition = 'opacity 0.3s ease';

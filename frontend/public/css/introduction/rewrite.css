@@ -4,18 +4,18 @@
 
 #rewrite-section {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 80px 40px 60px; /* Giảm padding xuống 80px top, 60px bottom */
+    padding: 80px 40px 60px; 
     text-align: center;
-    min-height: auto; /* Không cố định height, để content tự quyết định */
+    min-height: auto; 
     display: flex;
-    align-items: flex-start; /* Căn trên thay vì center */
+    align-items: flex-start; 
     justify-content: center;
     position: relative;
 }
 
 .rewrite-wrapper {
     width: 100%;
-    max-width: 1200px; /* Thêm max-width để không quá rộng */
+    max-width: 1200px; 
     position: relative;
     z-index: 1;
 }
@@ -116,11 +116,10 @@
     color: #999;
 }
 
-/* Character & Word Count - FIXED VISIBILITY */
 .rewrite-input-area > div:first-child > div:last-child {
     font-size: 13px;
-    color: white; /* Đổi từ #666 sang white */
-    background: rgba(0, 0, 0, 0.15); /* Thêm background tối */
+    color: white; 
+    background: rgba(0, 0, 0, 0.15); 
     padding: 8px 12px;
     border-radius: 6px;
     margin-top: 10px;
@@ -134,7 +133,6 @@
     font-weight: 600;
 }
 
-/* Select Dropdown */
 .rewrite-select {
     width: 100%;
     padding: 14px 15px;
@@ -155,7 +153,6 @@
     box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
 }
 
-/* Rewrite Button */
 #rewriteBtn {
     width: 100%;
     padding: 16px;
@@ -210,7 +207,6 @@
     color: #667eea;
 }
 
-/* Result Box */
 .rewrite-result-box {
     background: #f9f9f9;
     padding: 20px;
@@ -224,7 +220,6 @@
     word-wrap: break-word;
 }
 
-/* Copy Button */
 #copyRewriteBtn {
     width: 100%;
     padding: 12px;
@@ -249,7 +244,6 @@
     color: #667eea;
 }
 
-/* New Rewrite Button */
 #newRewriteBtn {
     width: 100%;
     padding: 12px;
