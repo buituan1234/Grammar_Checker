@@ -72,14 +72,14 @@ export function updateButtonVisibility() {
     if (tryItFreeBtn) tryItFreeBtn.style.display = loggedIn ? 'none' : 'inline-block';
     if (upgradeAccountBtn) upgradeAccountBtn.style.display = loggedIn ? 'inline-block' : 'none';
     if (authButtons) {
-    if (loggedIn) {
-        authButtons.classList.add('hidden');
-        authButtons.style.display = 'none';
-    } else {
-        authButtons.classList.remove('hidden');
-        authButtons.style.display = 'flex';
+        if (loggedIn) {
+            authButtons.classList.add('hidden');
+            authButtons.style.display = 'none';
+        } else {
+            authButtons.classList.remove('hidden');
+            authButtons.style.display = 'flex';
+        }
     }
-}
 }
 
 // Add page transition effects
@@ -87,10 +87,25 @@ export function initPageTransitions() {
     const links = document.querySelectorAll('a[href]:not([href^="#"]):not([target="_blank"])');
     links.forEach(link => {
         link.addEventListener('click', (e) => {
+            // Skip if link has onclick handler
             if (link.onclick) return;
             
-            e.preventDefault();
             const href = link.getAttribute('href');
+            
+            // CRITICAL FIX: Skip internal navigation links and void links
+            if (!href || 
+                href === '#' || 
+                href.startsWith('#') || 
+                href === 'javascript:void(0)' ||
+                href === 'javascript:void(0);' ||
+                link.id === 'rewriteWithAIBtn' ||  // Skip rewrite button
+                link.closest('#sidebar')  // Skip all sidebar links
+            ) {
+                return;  // Don't apply fade effect
+            }
+            
+            // Only apply fade effect for actual page navigation
+            e.preventDefault();
             document.body.style.opacity = '0.7';
             document.body.style.transition = 'opacity 0.3s ease';
             
@@ -99,4 +114,11 @@ export function initPageTransitions() {
             }, 300);
         });
     });
+}
+
+// Helper function to reset body opacity (exported for use in other modules)
+export function resetBodyOpacity() {
+    document.body.style.opacity = '1';
+    document.body.style.filter = 'none';
+    document.body.style.transition = 'opacity 0.3s ease';
 }

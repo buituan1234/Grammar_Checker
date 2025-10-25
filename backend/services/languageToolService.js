@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import { getLanguageDetectionService } from './languageDetectionService.js';
-import libreTranslateService from './libreTranslateService.js'; // ⭐ LibreTranslate Docker
+import GrammarCheckerFactory from '../grammar_checkers/index.js';
 
 class LanguageToolError extends Error {
   constructor(message, statusCode, details = null) {
@@ -8,19 +8,6 @@ class LanguageToolError extends Error {
     this.name = 'LanguageToolError';
     this.statusCode = statusCode;
     this.details = details;
-  }
-}
-
-// ⭐ Dịch message sang tiếng Anh bằng LibreTranslate
-async function translateMessageIfNeeded(message, langCode) {
-  if (!message || !langCode) return message;
-  if (langCode.startsWith('en')) return message;
-  
-  try {
-    return await libreTranslateService.translateToEnglish(message, langCode);
-  } catch (err) {
-    console.warn(`⚠️ Translation failed: ${err.message}`);
-    return message;
   }
 }
 
@@ -32,6 +19,7 @@ class LanguageToolService {
     this.grammarCacheTimeout = 15 * 60 * 1000;
     this.languageDetectionService = null;
     this.languageDetectionReady = false;
+    this.customCheckerLanguages = ['ru-RU', 'ru', 'zh-CN', 'zh', 'ja-JP', 'ja', 'es', 'es-ES', 'it', 'it-IT'];
     this.initLanguageDetection();
     setInterval(() => this.clearExpiredGrammarCache(), this.grammarCacheTimeout);
   }
@@ -49,6 +37,38 @@ class LanguageToolService {
       console.warn('⚠️ Failed to initialize CLD3 service:', error.message);
       this.languageDetectionReady = false;
     }
+  }
+
+  cleanText(text) {
+    return text
+      .replace(/\s+/g, ' ')
+      .replace(/[""]/g, '"')
+      .replace(/['']/g, "'")
+      .replace(/(\.\s*\.)+/g, '.')
+      .replace(/\s([?.!])/g, '$1')
+      .trim();
+  }
+
+  normalizeLang(lang) {
+    const LT_LANG_MAP = {
+      fr: 'fr',
+      'fr-FR': 'fr',
+      de: 'de-DE',
+      'de-DE': 'de-DE',
+      es: 'es',
+      it: 'it',
+      pt: 'pt',
+      en: 'en-US',
+      'en-US': 'en-US',
+      'en-GB': 'en-GB',
+      ru: 'ru-RU',
+      'ru-RU': 'ru-RU',
+      zh: 'zh-CN',
+      'zh-CN': 'zh-CN',
+      ja: 'ja-JP',
+      'ja-JP': 'ja-JP'
+    };
+    return LT_LANG_MAP[lang] || lang || 'auto';
   }
 
   async detectLanguage(text) {
@@ -78,8 +98,8 @@ class LanguageToolService {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString()
     });
-    const json = await res.json();
 
+    const json = await res.json();
     return {
       language: json.language?.detectedLanguage?.code || 'en-US',
       confidence: json.language?.detectedLanguage?.confidence || 0.5,
@@ -90,103 +110,173 @@ class LanguageToolService {
   }
 
   async checkGrammar(text, language = 'auto', options = {}) {
-    const cacheKey = `${language}-${text}`;
+    const cleanedText = this.cleanText(text);
+    const start = Date.now();
+
+    const cacheKey = `${language}-${cleanedText}`;
     const cached = this.grammarCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < this.grammarCacheTimeout) return cached.data;
+    
+    if (cached && Date.now() - cached.timestamp < this.grammarCacheTimeout) {
+      console.log('[CACHE HIT]', cacheKey.substring(0, 40) + '...');
+      return cached.data;
+    }
 
     let detectionInfo = null;
     let finalLang = language;
 
     if (language === 'auto') {
-      detectionInfo = await this.detectLanguage(text);
-      finalLang = detectionInfo.language;
-      console.log(`🔍 Detected language: ${finalLang}`);
+      try {
+        detectionInfo = await this.detectLanguage(cleanedText);
+        finalLang = detectionInfo.language;
+        console.log(`🔍 Detected language: ${finalLang} (${(detectionInfo.confidence * 100).toFixed(1)}%)`);
+      } catch (error) {
+        console.warn('⚠️ Language detection failed, fallback to en-US');
+        finalLang = 'en-US';
+      }
     }
 
-    const params = new URLSearchParams({
-      text,
-      preferredInterfaceLanguage: 'en',
-      level: 'picky'
-    });
+    if (!finalLang) finalLang = 'en-US';
 
-    const LT_LANG_MAP = {
-      fr: 'fr',
-      'fr-FR': 'fr',
-      de: 'de-DE',
-      'de-DE': 'de-DE',
-      es: 'es',
-      it: 'it',
-      pt: 'pt',
-      vi: 'vi-VN',
-      en: 'en-US'
-    };
+    const ltLang = this.normalizeLang(finalLang);
+    console.log('[GRAMMAR CHECK] Using language:', ltLang);
 
-    const ltLang = LT_LANG_MAP[finalLang] || finalLang || 'auto';
-    params.append('language', ltLang);
+    if (this.customCheckerLanguages.includes(ltLang)) {
+      console.log('[GRAMMAR CHECK] Using custom checker for:', ltLang);
+      
+      try {
+        const customResult = GrammarCheckerFactory.check(cleanedText, ltLang);
+        
+        if (customResult.success) {
+          const result = {
+            success: true,
+            text: cleanedText,
+            language: { code: ltLang },
+            matches: customResult.matches,
+            performance: {
+              total_time_ms: Date.now() - start,
+              match_count: customResult.matches.length
+            },
+            language_detection: detectionInfo,
+            source: customResult.source
+          };
 
-    const start = Date.now();
+          this.grammarCache.set(cacheKey, { 
+            data: result, 
+            timestamp: Date.now() 
+          });
+
+          console.log(`✅ Custom grammar check completed: ${result.matches.length} matches in ${result.performance.total_time_ms}ms`);
+          return result;
+        } else {
+          console.warn('[GRAMMAR CHECK] Custom checker failed:', customResult.error);
+        }
+      } catch (error) {
+        console.error('[GRAMMAR CHECK] Custom checker error:', error.message);
+      }
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeout);
 
-    let res;
     try {
-      res = await fetch(`${this.baseURL}/check`, {
+      const params = new URLSearchParams({
+        text: cleanedText,
+        language: ltLang,
+        enabledOnly: 'false',
+        preferredInterfaceLanguage: 'en'
+      });
+
+      console.log('[GRAMMAR CHECK] Request params:', {
+        text: cleanedText.substring(0, 50),
+        language: ltLang,
+        enabledOnly: 'false'
+      });
+
+      const res = await fetch(`${this.baseURL}/check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params.toString(),
         signal: controller.signal
       });
-    } finally {
+
       clearTimeout(timeout);
-    }
 
-    const responseTime = Date.now() - start;
-    if (!res.ok) throw new LanguageToolError('LanguageTool API error', res.status);
-
-    const data = await res.json();
-
-    // 🌍 Dịch tất cả messages sang tiếng Anh
-    if (Array.isArray(data.matches)) {
-      const messageCount = data.matches.length;
-      if (messageCount > 0) {
-        console.log(`🔄 Translating ${messageCount} grammar suggestions to English...`);
-        
-        for (const match of data.matches) {
-          // Dịch message chính
-          match.message_en = await translateMessageIfNeeded(match.message, finalLang);
-          
-          // Dịch rule description
-          if (match.rule) {
-            match.rule.description_en = await translateMessageIfNeeded(match.rule.description, finalLang);
-            
-            // Dịch category name
-            if (match.rule.category?.name) {
-              match.rule.category.name_en = await translateMessageIfNeeded(match.rule.category.name, finalLang);
-            }
-          }
-        }
-        
-        console.log('✅ Translation completed');
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('[GRAMMAR CHECK] API Response:', res.status, errorText);
+        throw new LanguageToolError(
+          `LanguageTool API error: ${res.status}`,
+          res.status
+        );
       }
+
+      const data = await res.json();
+      const responseTime = Date.now() - start;
+
+      const result = {
+        success: true,
+        text: cleanedText,
+        language: { code: ltLang },
+        matches: data?.matches || [],
+        performance: {
+          total_time_ms: responseTime,
+          match_count: (data?.matches || []).length
+        },
+        language_detection: detectionInfo,
+        source: 'languagetool-api'
+      };
+
+      this.grammarCache.set(cacheKey, { 
+        data: result, 
+        timestamp: Date.now() 
+      });
+
+      console.log(`✅ Grammar check completed: ${result.matches.length} matches in ${responseTime}ms`);
+
+      return result;
+
+    } catch (error) {
+      clearTimeout(timeout);
+
+      if (error.name === 'AbortError') {
+        throw new LanguageToolError(
+          `Grammar check timeout (${this.timeout}ms)`,
+          408
+        );
+      }
+
+      console.error('[GRAMMAR CHECK] Error:', error.message);
+      throw new LanguageToolError(
+        error.message || 'Grammar check failed',
+        500,
+        error
+      );
     }
-
-    const enriched = {
-      ...data,
-      performance: { response_time_ms: responseTime },
-      language_detection: detectionInfo
-    };
-
-    this.grammarCache.set(cacheKey, { data: enriched, timestamp: Date.now() });
-    return enriched;
   }
 
   clearExpiredGrammarCache() {
     const now = Date.now();
+    let clearedCount = 0;
+
     for (const [key, value] of this.grammarCache.entries()) {
       if (now - value.timestamp > this.grammarCacheTimeout) {
         this.grammarCache.delete(key);
+        clearedCount++;
       }
     }
+
+    if (clearedCount > 0) {
+      console.log(`🧹 Cleared ${clearedCount} expired cache entries`);
+    }
+  }
+
+  // 📊 Get cache stats
+  getCacheStats() {
+    return {
+      cache_size: this.grammarCache.size,
+      cache_timeout_ms: this.grammarCacheTimeout,
+      custom_checker_languages: this.customCheckerLanguages
+    };
   }
 }
 

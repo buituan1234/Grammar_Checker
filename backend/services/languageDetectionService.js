@@ -67,7 +67,7 @@ export class LanguageDetectionService {
   // ================== LANGUAGE MAPPING ==================
   getCLD3ToLanguageToolMapping() {
     return {
-      'en': 'en-US', 'fr': 'fr', 'de': 'de', 'es': 'es', 'it': 'it',
+      'en': 'en-US', 'fr': 'fr', 'de': 'de-DE', 'es': 'es', 'it': 'it',
       'pt': 'pt', 'nl': 'nl', 'ru': 'ru-RU', 'pl': 'pl-PL', 'sv': 'sv-SE',
       'da': 'da-DK', 'no': 'no', 'fi': 'fi-FI', 'is': 'is-IS',
       'cs': 'cs-CZ', 'sk': 'sk-SK', 'hu': 'hu-HU', 'ro': 'ro-RO', 'bg': 'bg-BG',
@@ -88,13 +88,20 @@ export class LanguageDetectionService {
     };
   }
 
-  // ================== PATTERN-BASED PRE-CHECK ==================
+  // ================== ENHANCED PATTERN-BASED PRE-CHECK ==================
   preCheckPatterns(text) {
+      console.log('[LDS] preCheckPatterns() called with text length:', text.length);
+      console.log('[LDS] First 30 chars:', text.slice(0, 30));
+      console.log('[LDS] Char codes (first 5):', [...text.slice(0, 5)].map(c => c.charCodeAt(0)));
+
     if (!text || typeof text !== 'string') return null;
+
+    // ========== CJK LANGUAGES (PRIORITY: HIGHEST) ==========
+    // Russian/Cyrillic - MUST CHECK BEFORE OTHERS
     if (/[\u0400-\u04FF]{3,}/.test(text)) {
       return {
         detected_language: 'ru',
-        confidence: 0.95,
+        confidence: 0.98,
         languagetool_code: 'ru-RU',
         reliable: true,
         source: 'pattern-cyrillic',
@@ -102,10 +109,11 @@ export class LanguageDetectionService {
       };
     }
 
+    // Japanese - MUST CHECK BEFORE CHINESE (has hiragana/katakana)
     if (/[\u3040-\u309F\u30A0-\u30FF]{2,}/.test(text)) {
       return {
         detected_language: 'ja',
-        confidence: 0.98,
+        confidence: 0.99,
         languagetool_code: 'ja-JP',
         reliable: true,
         source: 'pattern-japanese',
@@ -113,10 +121,11 @@ export class LanguageDetectionService {
       };
     }
 
-    if (/[\u4E00-\u9FFF]{2,}/.test(text) && !/[\u3040-\u309F\u30A0-\u30FF]/.test(text)) {
+    // Chinese (Simplified) - check for Han characters WITHOUT Japanese scripts
+    if (/[\u4E00-\u9FFF]{3,}/.test(text) && !/[\u3040-\u309F\u30A0-\u30FF]/.test(text)) {
       return {
         detected_language: 'zh',
-        confidence: 0.98,
+        confidence: 0.99,
         languagetool_code: 'zh-CN',
         reliable: true,
         source: 'pattern-chinese',
@@ -124,10 +133,11 @@ export class LanguageDetectionService {
       };
     }
 
+    // Korean
     if (/[\uAC00-\uD7AF\u1100-\u11FF]{2,}/.test(text)) {
       return {
         detected_language: 'ko',
-        confidence: 0.98,
+        confidence: 0.99,
         languagetool_code: 'ko-KR',
         reliable: true,
         source: 'pattern-korean',
@@ -135,21 +145,11 @@ export class LanguageDetectionService {
       };
     }
 
-    if (/[\u0600-\u06FF\u0750-\u077F]{2,}/.test(text)) {
-      return {
-        detected_language: 'ar',
-        confidence: 0.98,
-        languagetool_code: 'ar',
-        reliable: true,
-        source: 'pattern-arabic',
-        detection_time_ms: 0
-      };
-    }
-
+    // Thai
     if (/[\u0E00-\u0E7F]{2,}/.test(text)) {
       return {
         detected_language: 'th',
-        confidence: 0.98,
+        confidence: 0.99,
         languagetool_code: 'th',
         reliable: true,
         source: 'pattern-thai',
@@ -157,21 +157,25 @@ export class LanguageDetectionService {
       };
     }
 
-    if (/[¿¡]/.test(text)) {
+    // Arabic
+    if (/[\u0600-\u06FF\u0750-\u077F]{2,}/.test(text)) {
       return {
-        detected_language: 'es',
-        confidence: 0.9,
-        languagetool_code: 'es',
+        detected_language: 'ar',
+        confidence: 0.99,
+        languagetool_code: 'ar',
         reliable: true,
-        source: 'pattern-spanish',
+        source: 'pattern-arabic',
         detection_time_ms: 0
       };
     }
 
-    if (/\b(você|está|não|também|português)\b/i.test(text)) {
+    // ========== EUROPEAN LANGUAGES (PRIORITY: HIGH) ==========
+    // Portuguese - improved patterns
+    if (/\b(você|está|não|também|português|é|de|que|para|com|uma|um|como|mais|por|foi|ser|ao|aos|dos|das|o|a|e|em)\b/i.test(text) &&
+        /[\u00E3\u00E7\u00E9\u00EA\u00F5]/i.test(text)) {
       return {
         detected_language: 'pt',
-        confidence: 0.88,
+        confidence: 0.92,
         languagetool_code: 'pt',
         reliable: true,
         source: 'pattern-portuguese',
@@ -179,10 +183,11 @@ export class LanguageDetectionService {
       };
     }
 
-    if (/\b(più|meno|però|anche|già|così|perché|quando|sono|fatto|molto|troppo)\b/i.test(text)) {
+    // Italian - improved patterns (avoid confusion with Portuguese)
+    if (/\b(più|meno|però|anche|già|così|perché|quando|sono|fatto|molto|troppo|gli|il|lo|la|mi|ti|ci|vi|gliela|gliele)\b/i.test(text)) {
       return {
         detected_language: 'it',
-        confidence: 0.92,
+        confidence: 0.93,
         languagetool_code: 'it',
         reliable: true,
         source: 'pattern-italian',
@@ -190,23 +195,62 @@ export class LanguageDetectionService {
       };
     }
 
-    if (/\b(der|die|das|und|ist|nicht|du|was|sind|ein|eine|mit|auf|für|den|dem|zu|von|dass|haben|wir|sie|ich)\b/i.test(text)) {
+    // Spanish - ¿¡ characters are very strong signals
+    if (/[¿¡]/.test(text)) {
+      return {
+        detected_language: 'es',
+        confidence: 0.95,
+        languagetool_code: 'es',
+        reliable: true,
+        source: 'pattern-spanish',
+        detection_time_ms: 0
+      };
+    }
+
+    // Spanish - keyword patterns
+    if (/\b(español|ñ|el|la|de|que|y|a|en|es|por|para|con|una|un|como|más)\b/i.test(text) &&
+        /[\u00E1\u00E9\u00ED\u00F3\u00FA\u00F1]/i.test(text)) {
+      return {
+        detected_language: 'es',
+        confidence: 0.90,
+        languagetool_code: 'es',
+        reliable: true,
+        source: 'pattern-spanish-accent',
+        detection_time_ms: 0
+      };
+    }
+
+    // German
+    if (/\b(der|die|das|und|ist|nicht|du|was|sind|ein|eine|mit|auf|für|den|dem|zu|von|dass|haben|wir|sie|ich|werden|bin|bist|sein)\b/i.test(text)) {
       return {
         detected_language: 'de',
-        confidence: 0.95,
-        languagetool_code: 'de',
+        confidence: 0.94,
+        languagetool_code: 'de-DE',
         reliable: true,
         source: 'pattern-german',
         detection_time_ms: 0
       };
     }
 
+    // French
+    if (/\b(le|la|de|et|un|une|est|que|pas|pour|par|sur|avec|nous|vous|du|il|elle|ce|qui)\b/i.test(text)) {
+      return {
+        detected_language: 'fr',
+        confidence: 0.92,
+        languagetool_code: 'fr',
+        reliable: true,
+        source: 'pattern-french',
+        detection_time_ms: 0
+      };
+    }
+
+    // English - FALLBACK PATTERN (very generic, low confidence)
     const englishPattern = /\b(?:the|and|is|are|was|were|have|has|had|do|does|did|will|would|can|could|not|your|my|their|they|we|I)\b/i;
     const matches = text.toLowerCase().match(new RegExp(englishPattern, 'gi')) || [];
-    if (matches.length >= 2) {
+    if (matches.length >= 3) {
       return {
         detected_language: 'en',
-        confidence: 0.9,
+        confidence: 0.88,
         languagetool_code: 'en-US',
         reliable: true,
         source: 'pattern-english',
@@ -229,35 +273,33 @@ export class LanguageDetectionService {
         console.log('\n=== [LDS] LANGUAGE DETECTION DEBUG ===');
         console.log('[LDS] Input text (trimmed):', text);
         console.log('[LDS] Text length:', text.length);
-        console.log('[LDS] First 10 chars:', text.slice(0, 10));
-        console.log('[LDS] Char codes (first 8):', [...text.slice(0, 8)].map(c => `${c}:U+${c.charCodeAt(0).toString(16).toUpperCase()}`));
       }
 
+      // === CHECK CACHE FIRST ===
       if (this.config.enableCache && !options.skipCache) {
         const cached = this.getFromCache(text);
         if (cached) {
           if (this.config.logLevel === 'info' || this.config.logLevel === 'debug') {
-            console.log('[LDS] ✅ CACHE HIT - returning cached result');
-            console.log('[LDS] Cached result:', JSON.stringify(cached, null, 2));
-            console.log('[LDS] ===\n');
+            console.log('[LDS] ✅ CACHE HIT');
           }
           return cached;
         }
       }
 
+      // === PATTERN-BASED CHECK (PRIORITY) ===
       const preCheck = this.preCheckPatterns(text);
       if (preCheck) {
         if (this.config.logLevel === 'info' || this.config.logLevel === 'debug') {
-          console.log('[LDS] ✅ Pattern matched! Source:', preCheck.source);
+          console.log(`[LDS] ✅ Pattern matched! Source: ${preCheck.source}`);
         }
         this.setCache(text, preCheck);
         return preCheck;
       }
 
-      // === Ensure CLD3 initialised ===
+      // === CLD3 FALLBACK (for texts without clear patterns) ===
       if (!this.isInitialized) {
         if (this.config.logLevel === 'info') {
-          console.log('⚠️ CLD3 not initialized, initializing now...');
+          console.log('[LDS] Initializing CLD3...');
         }
         await this.initialize();
       }
@@ -267,24 +309,17 @@ export class LanguageDetectionService {
       }
 
       if (this.config.logLevel === 'debug' || this.config.logLevel === 'info') {
-        console.log('✅ CLD3 instance ready');
-        console.log('CLD3 config - minBytes:', this.config.minBytes, 'maxBytes:', this.config.maxBytes);
-        console.log('Calling CLD3.findLanguage()...');
+        console.log('[LDS] Using CLD3 for detection...');
       }
 
       const startTime = Date.now();
       const result = this.cldInstance.findLanguage(text);
       const detectionTime = Date.now() - startTime;
 
-      if (this.config.logLevel === 'debug') {
-        console.log('=== CLD3 RAW RESULT ===');
-        console.log(JSON.stringify(result, null, 2));
-      }
-
       // === If no language recognized, fallback ===
       if (!result || !result.language) {
         if (this.config.logLevel === 'warn' || this.config.logLevel === 'info') {
-          console.warn('⚠️ CLD3 returned invalid result - no language detected');
+          console.warn('[LDS] ⚠️ CLD3 returned no result - using fallback');
         }
         const fallbackResult = {
           detected_language: 'en',
@@ -292,8 +327,7 @@ export class LanguageDetectionService {
           languagetool_code: this.config.fallbackLanguage,
           reliable: false,
           source: 'fallback-no-detection',
-          detection_time_ms: detectionTime,
-          raw_result: result || null
+          detection_time_ms: detectionTime
         };
         this.setCache(text, fallbackResult);
         return fallbackResult;
@@ -310,32 +344,21 @@ export class LanguageDetectionService {
         languagetool_code: ltCode,
         reliable: result.is_reliable !== undefined ? result.is_reliable : (confidence > 0.7),
         source: 'cld3',
-        detection_time_ms: detectionTime,
-        raw_result: result
+        detection_time_ms: detectionTime
       };
 
       if (this.config.logLevel === 'info' || this.config.logLevel === 'debug') {
-        console.log('=== FINAL DETECTION RESULT ===');
-        console.log(JSON.stringify(detectionResult, null, 2));
+        console.log(`[LDS] CLD3 detected: ${result.language} (${(confidence * 100).toFixed(1)}%)`);
       }
 
       if (this.config.enableCache) {
         this.setCache(text, detectionResult);
-        if (this.config.logLevel === 'debug') {
-          console.log('✅ Result cached');
-        }
-      }
-
-      if (this.config.logLevel === 'info') {
-        const reliable = detectionResult.reliable ? 'reliable' : 'unreliable';
-        console.log(`Detected: ${result.language} -> ${ltCode} (${(confidence * 100).toFixed(1)}%, ${reliable}, ${detectionTime}ms)`);
       }
 
       return detectionResult;
 
     } catch (error) {
-      console.error('❌ Language detection error:', error.message);
-      if (error.stack) console.error(error.stack);
+      console.error('[LDS] ❌ Detection error:', error.message);
 
       const errorResult = {
         detected_language: 'en',
@@ -369,12 +392,11 @@ export class LanguageDetectionService {
         confidence: Number(result.probability ?? result.confidence ?? 0),
         languagetool_code: mapping[result.language] || this.config.fallbackLanguage,
         reliable: result.is_reliable !== undefined ? result.is_reliable : true,
-        source: 'cld3-multiple',
-        raw_result: result
+        source: 'cld3-multiple'
       }));
 
     } catch (error) {
-      console.error('Multiple language detection error:', error.message);
+      console.error('[LDS] Multiple language detection error:', error.message);
       return [{
         detected_language: 'en',
         confidence: 0.5,
@@ -439,12 +461,7 @@ export class LanguageDetectionService {
       return {
         status: isReady ? 'healthy' : 'initializing',
         cld3_initialized: this.isInitialized,
-        cache_size: this.detectionCache.size,
-        config: {
-          cache_enabled: this.config.enableCache,
-          cache_timeout_ms: this.config.cacheTimeout,
-          fallback_language: this.config.fallbackLanguage
-        }
+        cache_size: this.detectionCache.size
       };
     } catch (error) {
       return {
@@ -464,7 +481,7 @@ export class LanguageDetectionService {
 
   clearCache() {
     this.detectionCache.clear();
-    console.log('Language detection cache cleared');
+    console.log('[LDS] Cache cleared');
   }
 
   async cleanup() {
@@ -477,7 +494,7 @@ export class LanguageDetectionService {
     this.cldInstance = null;
     this.isInitialized = false;
     this.initPromise = null;
-    console.log('Language detection service cleaned up');
+    console.log('[LDS] Service cleaned up');
   }
 }
 

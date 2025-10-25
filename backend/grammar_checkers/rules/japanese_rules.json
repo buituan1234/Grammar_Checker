@@ -1,0 +1,194 @@
+{
+  "particleRules": {
+    "は": {
+      "validBefore": ["noun", "pronoun"],
+      "type": "topic marker",
+      "description": "Marks the topic of the sentence"
+    },
+    "を": {
+      "validBefore": ["noun", "pronoun"],
+      "type": "object marker",
+      "description": "Marks the direct object of a verb"
+    },
+    "に": {
+      "validBefore": ["noun", "pronoun"],
+      "type": "destination marker",
+      "description": "Indicates destination or location"
+    },
+    "へ": {
+      "validBefore": ["noun", "pronoun"],
+      "type": "direction marker",
+      "description": "Indicates direction"
+    },
+    "で": {
+      "validBefore": ["noun", "pronoun"],
+      "type": "means/location marker",
+      "description": "Indicates means, location, or reason"
+    },
+    "から": {
+      "validBefore": ["noun", "pronoun"],
+      "type": "source marker",
+      "description": "Indicates source or starting point"
+    },
+    "まで": {
+      "validBefore": ["noun", "pronoun"],
+      "type": "extent marker",
+      "description": "Indicates extent or ending point"
+    },
+    "も": {
+      "validBefore": ["noun", "pronoun"],
+      "type": "also marker",
+      "description": "Marks inclusive meaning (also, too)"
+    },
+    "より": {
+      "validBefore": ["noun", "pronoun"],
+      "type": "comparison marker",
+      "description": "Used in comparisons"
+    },
+    "と": {
+      "validBefore": ["noun", "pronoun"],
+      "type": "conjunction marker",
+      "description": "Indicates 'and' or 'with'"
+    },
+    "や": {
+      "validBefore": ["noun", "pronoun"],
+      "type": "listing marker",
+      "description": "Lists examples (like, such as)"
+    }
+  },
+  "particles": [
+    "は",
+    "を",
+    "に",
+    "へ",
+    "で",
+    "から",
+    "まで",
+    "も",
+    "より",
+    "と",
+    "や"
+  ],
+  "verbEndings": {
+    "ます": {
+      "type": "polite present"
+    },
+    "ました": {
+      "type": "polite past"
+    },
+    "ません": {
+      "type": "polite negative"
+    },
+    "ませんでした": {
+      "type": "polite negative past"
+    },
+    "ている": {
+      "type": "progressive"
+    },
+    "た": {
+      "type": "past"
+    },
+    "ない": {
+      "type": "negative"
+    },
+    "なかった": {
+      "type": "negative past"
+    }
+  },
+  "errorPatterns": [
+    {
+      "name": "double_particle",
+      "pattern": "(は|を|に|で){2,}",
+      "flags": "g",
+      "type": "Grammar",
+      "message": "Double particle detected",
+      "shortMessage": "Duplicate particle"
+    },
+    {
+      "name": "invalid_particle_sequence",
+      "pattern": "は\\s*を|を\\s*は|に\\s*を|を\\s*に",
+      "flags": "g",
+      "type": "Grammar",
+      "message": "Invalid particle sequence detected",
+      "shortMessage": "Particle order error"
+    },
+    {
+      "name": "ha_wo_conflict",
+      "pattern": "は\\s*を",
+      "flags": "g",
+      "type": "Grammar",
+      "message": "は and を should not both mark the same noun",
+      "shortMessage": "Particle conflict"
+    },
+    {
+      "name": "wo_ha_conflict",
+      "pattern": "を\\s*は",
+      "flags": "g",
+      "type": "Grammar",
+      "message": "を and は should not both mark the same noun",
+      "shortMessage": "Particle conflict"
+    },
+    {
+      "name": "ni_de_conflict",
+      "pattern": "に\\s*で",
+      "flags": "g",
+      "type": "Grammar",
+      "message": "に and で marking conflict",
+      "shortMessage": "Particle conflict"
+    },
+    {
+      "name": "missing_verb_ending",
+      "pattern": "[ぁ-ん一-龯]*(?!ます|た|ない|ている)",
+      "flags": "g",
+      "type": "Grammar",
+      "checkMissing": true,
+      "message": "Sentence may lack proper verb ending",
+      "shortMessage": "Incomplete verb form",
+      "suggestions": ["ます", "た"]
+    },
+    {
+      "name": "missing_punctuation",
+      "pattern": "[。！？]",
+      "flags": "g",
+      "type": "Punctuation",
+      "checkMissing": true,
+      "message": "Missing sentence-ending punctuation",
+      "shortMessage": "Punctuation error",
+      "suggestion": "。"
+    },
+    {
+      "name": "excessive_katakana",
+      "pattern": "[ァ-ヴ]{2,}",
+      "flags": "g",
+      "type": "Style",
+      "message": "Excessive katakana usage - may want to use hiragana or kanji for some words",
+      "shortMessage": "Script usage"
+    }
+  ],
+  "characterRanges": {
+    "hiragana": "[ぁ-ん]",
+    "katakana": "[ァ-ヴ]",
+    "kanji": "[一-龯]"
+  },
+  "validSequences": [
+    "は + verb",
+    "を + verb",
+    "に + verb",
+    "で + verb",
+    "から + に"
+  ],
+  "invalidSequences": [
+    {
+      "sequence": "は を",
+      "reason": "Topic and object markers cannot mark same noun"
+    },
+    {
+      "sequence": "を は",
+      "reason": "Object and topic markers cannot mark same noun"
+    },
+    {
+      "sequence": "に で",
+      "reason": "Destination and means/location markers conflict"
+    }
+  ]
+}

@@ -1,0 +1,315 @@
+/* ==========================================
+   REWRITE SECTION STYLES - Optimized for inline display
+   ========================================== */
+
+#rewrite-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 80px 40px 60px; /* Giảm padding xuống 80px top, 60px bottom */
+    text-align: center;
+    min-height: auto; /* Không cố định height, để content tự quyết định */
+    display: flex;
+    align-items: flex-start; /* Căn trên thay vì center */
+    justify-content: center;
+    position: relative;
+}
+
+.rewrite-wrapper {
+    width: 100%;
+    max-width: 1200px; /* Thêm max-width để không quá rộng */
+    position: relative;
+    z-index: 1;
+}
+
+/* Header */
+.rewrite-header {
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+}
+
+.rewrite-header h1 {
+    font-size: 2.5rem;
+    margin: 0 0 10px 0;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    line-height: 1.2;
+}
+
+.rewrite-header p {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+/* Back Button */
+#backFromRewriteBtn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+    font-size: 20px;
+    cursor: pointer;
+    color: white;
+    transition: all 0.3s ease;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+#backFromRewriteBtn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: white;
+    transform: translateX(-3px);
+}
+
+/* Input Area */
+.rewrite-input-area {
+    margin-bottom: 30px;
+    width: 100%;
+}
+
+.rewrite-input-area > div {
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+.rewrite-input-area label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: white;
+    font-size: 16px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Textarea */
+.rewrite-textarea {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    resize: vertical;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    box-sizing: border-box;
+    line-height: 1.6;
+    background: white;
+    color: #333;
+    min-height: 180px;
+}
+
+.rewrite-textarea:focus {
+    outline: none;
+    border-color: white;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+}
+
+.rewrite-textarea::placeholder {
+    color: #999;
+}
+
+/* Character & Word Count - FIXED VISIBILITY */
+.rewrite-input-area > div:first-child > div:last-child {
+    font-size: 13px;
+    color: white; /* Đổi từ #666 sang white */
+    background: rgba(0, 0, 0, 0.15); /* Thêm background tối */
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 10px;
+    display: inline-block;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.rewrite-input-area > div:first-child > div:last-child strong {
+    color: #fff;
+    font-weight: 600;
+}
+
+/* Select Dropdown */
+.rewrite-select {
+    width: 100%;
+    padding: 14px 15px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    font-size: 15px;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    box-sizing: border-box;
+    font-family: inherit;
+    color: #333;
+}
+
+.rewrite-select:focus {
+    outline: none;
+    border-color: white;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+}
+
+/* Rewrite Button */
+#rewriteBtn {
+    width: 100%;
+    padding: 16px;
+    font-size: 17px;
+    font-weight: 600;
+    background: white;
+    color: #667eea;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-sizing: border-box;
+    margin-top: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+#rewriteBtn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    background: #f8f9fa;
+}
+
+#rewriteBtn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Results Area */
+#rewriteResults {
+    margin-top: 40px;
+    padding: 30px;
+    background: white;
+    border-radius: 12px;
+    text-align: left;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+#rewriteResults h2 {
+    font-size: 22px;
+    margin: 0 0 20px 0;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#rewriteResults h2 i {
+    color: #667eea;
+}
+
+/* Result Box */
+.rewrite-result-box {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    margin-bottom: 20px;
+    line-height: 1.8;
+    color: #333;
+    font-size: 15px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Copy Button */
+#copyRewriteBtn {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    background: #f0f0f0;
+    color: #333;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+#copyRewriteBtn:hover {
+    background: #e0e0e0;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+/* New Rewrite Button */
+#newRewriteBtn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    background: white;
+    color: #667eea;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+#newRewriteBtn:hover {
+    background: #667eea;
+    color: white;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .rewrite-header h1 {
+        font-size: 2.2rem;
+    }
+
+    .rewrite-header p {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    #rewrite-section {
+        padding: 80px 20px 60px;
+    }
+
+    .rewrite-header h1 {
+        font-size: 1.8rem;
+    }
+
+    .rewrite-header p {
+        font-size: 1rem;
+    }
+
+    #backFromRewriteBtn {
+        top: 10px;
+        left: 10px;
+        font-size: 18px;
+        padding: 8px 12px;
+    }
+
+    .rewrite-textarea {
+        min-height: 150px;
+    }
+
+    #rewriteResults {
+        padding: 20px;
+    }
+}

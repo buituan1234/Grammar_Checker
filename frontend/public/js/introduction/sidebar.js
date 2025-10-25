@@ -33,7 +33,8 @@ function setupSidebarNavigation(sidebar, pageContentWrapper) {
         item.addEventListener('click', (e) => {
             const href = item.getAttribute('href');
             
-            if (href && href.startsWith('#')) {
+            // ← Thêm kiểm tra này
+            if (href && href.startsWith('#') && href !== '#') {
                 e.preventDefault();
                 
                 const targetSection = document.querySelector(href);

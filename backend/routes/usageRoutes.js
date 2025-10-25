@@ -31,8 +31,6 @@ router.post('/log', async (req, res) => {
     const language = req.body?.language ?? req.body?.lang ?? null;
     const detailsObj = req.body?.metadata ?? req.body?.details ?? req.body?.message ?? {};
     const Details = (typeof detailsObj === 'string') ? detailsObj : JSON.stringify(detailsObj);
-
-    // IP detection with x-forwarded-for fallback
     const ipHeader = req.headers['x-forwarded-for'] || '';
     const ipFromHeader = ipHeader.split(',').map(s => s.trim()).find(Boolean) || null;
     const IPAddress = (ipFromHeader || req.ip || req.socket?.remoteAddress || '').toString();
@@ -57,6 +55,39 @@ router.post('/log', async (req, res) => {
   } catch (error) {
     console.error('Error logging usage:', error.stack || error);
     return res.status(500).json({ success: false, error: 'Failed to log usage', detail: error?.message });
+  }
+});
+
+// Trong usageRoutes.js - đảm bảo endpoint cleanup dùng stored procedure
+router.post('/cleanup', async (req, res) => {
+  try {
+    const pool = req.app.locals.db;
+    const daysToKeep = req.body.days !== undefined ? req.body.days : 30;
+    
+    const result = await pool.request()
+      .input('DaysToKeep', sql.Int, daysToKeep)
+      .execute('sp_CleanupUsageLogs');
+    
+    const cleanupResult = result.recordset[0];
+    
+    if (cleanupResult.Status === 'Success') {
+      return res.json({ 
+        success: true, 
+        message: `Deleted ${cleanupResult.DeletedRows} logs older than ${daysToKeep} days`,
+        deletedCount: cleanupResult.DeletedRows,
+        cutoffDate: cleanupResult.CutoffDate,
+        cleanupDate: cleanupResult.CleanupDate
+      });
+    } else {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Cleanup failed', 
+        detail: cleanupResult.ErrorMessage 
+      });
+    }
+  } catch (error) {
+    console.error('Error cleaning up logs:', error);
+    return res.status(500).json({ success: false, error: 'Cleanup failed', detail: error?.message });
   }
 });
 

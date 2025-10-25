@@ -1,9 +1,10 @@
-/* introduction/main.css - Entry point import tất cả modules */
+/* introduction/main.css */
 
 /* Import all modules in correct order */
 @import url('./base.css');        
 @import url('./header.css');        
-@import url('./hero.css');          
+@import url('./hero.css');   
+@import url('./rewrite.css');         
 @import url('./buttons.css');       
 @import url('./features.css');      
 @import url('./testimonials.css');  

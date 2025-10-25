@@ -1,5 +1,5 @@
 // backend/services/libreTranslateService.js
-import fetch from 'node-fetch';
+/*import fetch from 'node-fetch';
 
 class LibreTranslateService {
   constructor() {
@@ -123,4 +123,4 @@ class LibreTranslateService {
 }
 
 const libreTranslateService = new LibreTranslateService();
-export default libreTranslateService;
+export default libreTranslateService;*/

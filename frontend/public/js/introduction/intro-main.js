@@ -16,6 +16,8 @@ import {
     updateSidebarVisibility, 
     initSidebarScrollSpy 
 } from './sidebar.js';
+import './rewriteHandler.js';
+
 
 function getAuthManager() {
     if (typeof AuthManager !== 'undefined' && AuthManager) {

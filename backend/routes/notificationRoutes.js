@@ -1,65 +1,138 @@
-// backend/routes/notificationRoutes.js
 import express from 'express';
 import sql from 'mssql';
+import rateLimit from 'express-rate-limit';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const router = express.Router();
 
-// Utility function to get database pool (same pattern as userRoutes.js)
+// ========== HELPER FUNCTIONS ==========
+
 function getDbPool(req) {
     if (!req.app.locals.db) {
-        console.error('❌ Database pool not available in req.app.locals.db');
+        console.error('❌ Database pool not available');
         throw new Error('Database pool not available.');
     }
-    console.log('✅ Database pool retrieved successfully');
     return req.app.locals.db;
 }
 
-// Middleware to check if user is admin (same as userRoutes.js)
+// Validate pagination parameters
+const validatePagination = (limit, offset) => {
+    const parsedLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 500);
+    const parsedOffset = Math.max(parseInt(offset) || 0, 0);
+    return { limit: parsedLimit, offset: parsedOffset };
+};
+
+// Validate date range
+const validateDateRange = (dateFrom, dateTo) => {
+    if (dateFrom) {
+        const from = new Date(dateFrom);
+        if (isNaN(from.getTime())) {
+            throw new Error('Invalid dateFrom format. Use ISO format (YYYY-MM-DD)');
+        }
+    }
+    if (dateTo) {
+        const to = new Date(dateTo);
+        if (isNaN(to.getTime())) {
+            throw new Error('Invalid dateTo format. Use ISO format (YYYY-MM-DD)');
+        }
+    }
+    if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
+        throw new Error('dateFrom cannot be after dateTo');
+    }
+};
+
+// Parse notification record
+const parseNotification = (record) => ({
+    ...record,
+    metadata: record.Metadata ? JSON.parse(record.Metadata) : {},
+    isRead: !!record.IsRead,
+    readAt: record.ReadAt || null,
+    createdAt: record.CreatedAt?.toISOString()
+});
+
+// Standard response format
+const successResponse = (data, meta = null, message = null) => ({
+    success: true,
+    data,
+    meta,
+    message,
+    timestamp: new Date().toISOString()
+});
+
+const errorResponse = (error) => ({
+    success: false,
+    error,
+    timestamp: new Date().toISOString()
+});
+
+// ========== MIDDLEWARE ==========
+
+// Admin authorization
 const isAdmin = (req, res, next) => {
-    console.log('🔐 Admin middleware - checking authorization...');
+    console.log('🔐 Checking admin authorization...');
     const userRole = req.headers['x-user-role'] || req.body.userRole;
-    console.log(`🔍 Extracted user role: "${userRole}"`);
 
     if (userRole === 'admin') {
         console.log('✅ Admin access granted');
         next();
     } else {
         console.log(`❌ Admin access denied. Role: "${userRole}"`);
-        res.status(403).json({ 
-            success: false, 
-            error: 'Access denied. Admin privileges required.',
-            receivedRole: userRole,
-            expectedRole: 'admin'
-        });
+        return res.status(403).json(errorResponse('Admin privileges required'));
     }
 };
 
-// Middleware to check authentication (basic auth check)
+// Authentication check
 const requireAuth = (req, res, next) => {
     const userId = req.headers['x-user-id'] || req.params.userId;
     const userRole = req.headers['x-user-role'];
-    
+
     if (!userId || !userRole) {
-        return res.status(401).json({
-            success: false,
-            error: 'Authentication required. Missing user credentials.'
-        });
+        return res.status(401).json(errorResponse('Authentication required'));
     }
-    
-    // Store in req for later use
+
     req.authenticatedUser = {
         id: parseInt(userId),
         role: userRole
     };
-    
+
     next();
 };
 
-// 🔔 CREATE NOTIFICATION (Internal function - called when admin updates user)
+// User authorization - check if user can access their own data
+const authorizeUser = (req, res, next) => {
+    const targetUserId = parseInt(req.params.userId);
+
+    if (req.authenticatedUser.role !== 'admin' && req.authenticatedUser.id !== targetUserId) {
+        return res.status(403).json(
+            errorResponse('Access denied. You can only access your own notifications.')
+        );
+    }
+
+    next();
+};
+
+// Rate limiting
+const notificationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100,
+    message: 'Too many requests, please try again later',
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+router.use(notificationLimiter);
+
+// ========== INTERNAL FUNCTIONS ==========
+
+/**
+ * Create notification (called when admin updates user)
+ */
 export const createNotification = async (pool, notificationData) => {
     try {
         const request = pool.request();
-        
+
         const query = `
             INSERT INTO Notifications (
                 UserID, Title, Message, Type, IsRead, 
@@ -83,44 +156,36 @@ export const createNotification = async (pool, notificationData) => {
         const result = await request.query(query);
         const notificationId = result.recordset[0].NotificationID;
 
-        console.log('✅ Notification created successfully:', {
-            id: notificationId,
-            userID: notificationData.userID,
-            type: notificationData.type
-        });
-
+        console.log('✅ Notification created:', { id: notificationId, userID: notificationData.userID });
         return { success: true, notificationId };
-
     } catch (err) {
         console.error('❌ Error creating notification:', err);
         throw err;
     }
 };
 
-// 📱 GET USER NOTIFICATIONS - Get all notifications for a specific user
-router.get('/user/:userId', requireAuth, async (req, res) => {
+// ========== ROUTES ==========
+
+/**
+ * GET /notifications/user/:userId
+ * Get all notifications for a user with pagination
+ */
+router.get('/user/:userId', requireAuth, authorizeUser, async (req, res) => {
     const userId = parseInt(req.params.userId);
-    const { limit = 50, offset = 0, unreadOnly = false } = req.query;
+    const { limit, offset, unreadOnly = false } = req.query;
 
-    // Security check: users can only see their own notifications
-    if (req.authenticatedUser.role !== 'admin' && req.authenticatedUser.id !== userId) {
-        return res.status(403).json({
-            success: false,
-            error: 'Access denied. You can only view your own notifications.'
-        });
-    }
-
-    console.log(`📱 Fetching notifications for user ${userId}`, { limit, offset, unreadOnly });
+    console.log(`📱 Fetching notifications for user ${userId}`);
 
     try {
+        const { limit: validLimit, offset: validOffset } = validatePagination(limit, offset);
         const pool = getDbPool(req);
-        const request = pool.request();
 
         let whereClause = 'WHERE n.UserID = @userId';
         if (unreadOnly === 'true') {
             whereClause += ' AND n.IsRead = 0';
         }
 
+        // Combined query to get notifications and unread count in one go
         const query = `
             SELECT 
                 n.NotificationID,
@@ -135,7 +200,8 @@ router.get('/user/:userId', requireAuth, async (req, res) => {
                 u.fullName as AdminName,
                 n.Metadata,
                 n.CreatedAt,
-                n.ReadAt
+                n.ReadAt,
+                (SELECT COUNT(*) FROM Notifications WHERE UserID = @userId AND IsRead = 0) as UnreadCount
             FROM Notifications n
             LEFT JOIN Users u ON n.AdminID = u.UserID
             ${whereClause}
@@ -144,50 +210,32 @@ router.get('/user/:userId', requireAuth, async (req, res) => {
             FETCH NEXT @limit ROWS ONLY;
         `;
 
-        request.input('userId', sql.Int, userId);
-        request.input('limit', sql.Int, parseInt(limit));
-        request.input('offset', sql.Int, parseInt(offset));
-
-        const result = await request.query(query);
-
-        // Get unread count
-        const countQuery = `
-            SELECT COUNT(*) as unreadCount 
-            FROM Notifications 
-            WHERE UserID = @userId AND IsRead = 0;
-        `;
-        
-        const countResult = await pool.request()
+        const result = await pool.request()
             .input('userId', sql.Int, userId)
-            .query(countQuery);
+            .input('limit', sql.Int, validLimit)
+            .input('offset', sql.Int, validOffset)
+            .query(query);
 
-        const notifications = result.recordset.map(notification => ({
-            ...notification,
-            Metadata: notification.Metadata ? JSON.parse(notification.Metadata) : {}
-        }));
+        const notifications = result.recordset.map(parseNotification);
+        const unreadCount = result.recordset.length > 0 ? result.recordset[0].UnreadCount : 0;
 
-        res.json({
-            success: true,
-            notifications,
-            meta: {
-                total: result.recordset.length,
-                unreadCount: countResult.recordset[0].unreadCount,
-                limit: parseInt(limit),
-                offset: parseInt(offset)
-            }
-        });
+        res.json(successResponse(notifications, {
+            total: notifications.length,
+            unreadCount,
+            limit: validLimit,
+            offset: validOffset
+        }, 'Notifications retrieved successfully'));
 
     } catch (err) {
         console.error('❌ Error fetching notifications:', err);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error fetching notifications.',
-            details: err.message
-        });
+        res.status(500).json(errorResponse(err.message));
     }
 });
 
-// ✅ MARK NOTIFICATION AS READ
+/**
+ * PATCH /notifications/:notificationId/read
+ * Mark a single notification as read
+ */
 router.patch('/:notificationId/read', requireAuth, async (req, res) => {
     const notificationId = parseInt(req.params.notificationId);
 
@@ -195,83 +243,50 @@ router.patch('/:notificationId/read', requireAuth, async (req, res) => {
 
     try {
         const pool = getDbPool(req);
-        const request = pool.request();
 
-        // First, check if notification belongs to the authenticated user (security)
-        const checkQuery = `
-            SELECT UserID FROM Notifications WHERE NotificationID = @notificationId;
-        `;
-
-        request.input('notificationId', sql.Int, notificationId);
-        const checkResult = await request.query(checkQuery);
-
-        if (checkResult.recordset.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Notification not found.'
-            });
-        }
-
-        const notificationUserId = checkResult.recordset[0].UserID;
-
-        // Security check: users can only mark their own notifications as read
-        if (req.authenticatedUser.role !== 'admin' && req.authenticatedUser.id !== notificationUserId) {
-            return res.status(403).json({
-                success: false,
-                error: 'Access denied. You can only modify your own notifications.'
-            });
-        }
-
-        // Update notification as read
-        const updateQuery = `
+        // Check ownership and update in single query
+        const query = `
             UPDATE Notifications 
             SET IsRead = 1, ReadAt = GETDATE()
-            WHERE NotificationID = @notificationId AND IsRead = 0;
+            OUTPUT inserted.UserID
+            WHERE NotificationID = @notificationId 
+            AND IsRead = 0
+            AND UserID IN (
+                SELECT @userId WHERE @userRole = 'admin'
+                UNION ALL
+                SELECT @userId WHERE @userRole != 'admin' AND UserID = @userId
+            );
         `;
 
-        const updateResult = await pool.request()
+        const result = await pool.request()
             .input('notificationId', sql.Int, notificationId)
-            .query(updateQuery);
+            .input('userId', sql.Int, req.authenticatedUser.id)
+            .input('userRole', sql.VarChar(20), req.authenticatedUser.role)
+            .query(query);
 
-        if (updateResult.rowsAffected[0] > 0) {
-            res.json({
-                success: true,
-                message: 'Notification marked as read successfully.'
-            });
-        } else {
-            res.json({
-                success: true,
-                message: 'Notification was already marked as read.'
-            });
+        if (result.recordset.length === 0) {
+            return res.status(404).json(errorResponse('Notification not found or already read'));
         }
+
+        res.json(successResponse(null, null, 'Notification marked as read'));
 
     } catch (err) {
         console.error('❌ Error marking notification as read:', err);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error updating notification.',
-            details: err.message
-        });
+        res.status(500).json(errorResponse(err.message));
     }
 });
 
-// ✅ MARK ALL NOTIFICATIONS AS READ FOR A USER
-router.patch('/user/:userId/mark-all-read', requireAuth, async (req, res) => {
+/**
+ * PATCH /notifications/user/:userId/mark-all-read
+ * Mark all notifications as read for a user
+ */
+router.patch('/user/:userId/mark-all-read', requireAuth, authorizeUser, async (req, res) => {
     const userId = parseInt(req.params.userId);
-
-    // Security check: users can only mark their own notifications
-    if (req.authenticatedUser.role !== 'admin' && req.authenticatedUser.id !== userId) {
-        return res.status(403).json({
-            success: false,
-            error: 'Access denied. You can only modify your own notifications.'
-        });
-    }
 
     console.log(`✅ Marking all notifications as read for user ${userId}`);
 
     try {
         const pool = getDbPool(req);
-        const request = pool.request();
 
         const query = `
             UPDATE Notifications 
@@ -279,43 +294,130 @@ router.patch('/user/:userId/mark-all-read', requireAuth, async (req, res) => {
             WHERE UserID = @userId AND IsRead = 0;
         `;
 
-        request.input('userId', sql.Int, userId);
-        const result = await request.query(query);
+        const result = await pool.request()
+            .input('userId', sql.Int, userId)
+            .query(query);
 
-        res.json({
-            success: true,
-            message: `${result.rowsAffected[0]} notifications marked as read.`,
-            markedCount: result.rowsAffected[0]
-        });
+        res.json(successResponse(null, null, `${result.rowsAffected[0]} notifications marked as read`));
 
     } catch (err) {
         console.error('❌ Error marking all notifications as read:', err);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error updating notifications.',
-            details: err.message
-        });
+        res.status(500).json(errorResponse(err.message));
     }
 });
 
-// 👨‍💼 ADMIN: Get notifications sent by specific admin
+/**
+ * DELETE /notifications/:notificationId
+ * Delete a single notification
+ */
+router.delete('/:notificationId', requireAuth, async (req, res) => {
+    const notificationId = parseInt(req.params.notificationId);
+
+    console.log(`🗑️ Deleting notification ${notificationId}`);
+
+    try {
+        const pool = getDbPool(req);
+
+        const query = `
+            DELETE FROM Notifications 
+            OUTPUT deleted.UserID
+            WHERE NotificationID = @notificationId
+            AND (
+                @userRole = 'admin' 
+                OR UserID = @userId
+            );
+        `;
+
+        const result = await pool.request()
+            .input('notificationId', sql.Int, notificationId)
+            .input('userId', sql.Int, req.authenticatedUser.id)
+            .input('userRole', sql.VarChar(20), req.authenticatedUser.role)
+            .query(query);
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json(errorResponse('Notification not found'));
+        }
+
+        res.json(successResponse(null, null, 'Notification deleted successfully'));
+
+    } catch (err) {
+        console.error('❌ Error deleting notification:', err);
+        res.status(500).json(errorResponse(err.message));
+    }
+});
+
+/**
+ * DELETE /notifications/user/:userId/delete-all
+ * Delete all notifications for a user
+ */
+router.delete('/user/:userId/delete-all', requireAuth, authorizeUser, async (req, res) => {
+    const userId = parseInt(req.params.userId);
+
+    console.log(`🗑️ Deleting all notifications for user ${userId}`);
+
+    try {
+        const pool = getDbPool(req);
+
+        const query = `
+            DELETE FROM Notifications WHERE UserID = @userId;
+        `;
+
+        const result = await pool.request()
+            .input('userId', sql.Int, userId)
+            .query(query);
+
+        res.json(successResponse(null, null, `${result.rowsAffected[0]} notifications deleted`));
+
+    } catch (err) {
+        console.error('❌ Error deleting all notifications:', err);
+        res.status(500).json(errorResponse(err.message));
+    }
+});
+
+/**
+ * GET /notifications/languages
+ * Get all supported notification types
+ */
+router.get('/types', async (req, res) => {
+    try {
+        const notificationTypes = [
+            { type: 'profile_update', description: 'Profile information updated' },
+            { type: 'status_change', description: 'Account status changed' },
+            { type: 'security_alert', description: 'Security-related alert' },
+            { type: 'system_message', description: 'System notification' }
+        ];
+
+        res.json(successResponse(notificationTypes, null, 'Notification types retrieved'));
+
+    } catch (err) {
+        console.error('❌ Error fetching notification types:', err);
+        res.status(500).json(errorResponse(err.message));
+    }
+});
+
+/**
+ * GET /notifications/admin/sent/:adminId
+ * Get notifications sent by a specific admin with filtering
+ */
 router.get('/admin/sent/:adminId', isAdmin, async (req, res) => {
     const adminId = parseInt(req.params.adminId);
-    const { limit = 100, offset = 0, dateFrom, dateTo } = req.query;
+    const { limit, offset, dateFrom, dateTo } = req.query;
 
     console.log(`👨‍💼 Admin ${adminId} fetching sent notifications`);
 
     try {
+        validateDateRange(dateFrom, dateTo);
+        const { limit: validLimit, offset: validOffset } = validatePagination(limit, offset);
         const pool = getDbPool(req);
-        const request = pool.request();
 
         let whereClause = 'WHERE n.AdminID = @adminId';
-        
+        const request = pool.request().input('adminId', sql.Int, adminId);
+
         if (dateFrom) {
             whereClause += ' AND n.CreatedAt >= @dateFrom';
             request.input('dateFrom', sql.DateTime, new Date(dateFrom));
         }
-        
+
         if (dateTo) {
             whereClause += ' AND n.CreatedAt <= @dateTo';
             request.input('dateTo', sql.DateTime, new Date(dateTo));
@@ -341,92 +443,76 @@ router.get('/admin/sent/:adminId', isAdmin, async (req, res) => {
             ORDER BY n.CreatedAt DESC
             OFFSET @offset ROWS
             FETCH NEXT @limit ROWS ONLY;
-        `;
 
-        request.input('adminId', sql.Int, adminId);
-        request.input('limit', sql.Int, parseInt(limit));
-        request.input('offset', sql.Int, parseInt(offset));
-
-        const result = await request.query(query);
-
-        // Get stats
-        const statsQuery = `
             SELECT 
                 COUNT(*) as totalSent,
                 SUM(CASE WHEN IsRead = 1 THEN 1 ELSE 0 END) as readCount,
                 SUM(CASE WHEN IsRead = 0 THEN 1 ELSE 0 END) as unreadCount
             FROM Notifications 
-            WHERE AdminID = @adminId
-            ${dateFrom ? 'AND CreatedAt >= @dateFrom' : ''}
-            ${dateTo ? 'AND CreatedAt <= @dateTo' : ''};
+            ${whereClause};
         `;
 
-        const statsRequest = pool.request().input('adminId', sql.Int, adminId);
-        if (dateFrom) statsRequest.input('dateFrom', sql.DateTime, new Date(dateFrom));
-        if (dateTo) statsRequest.input('dateTo', sql.DateTime, new Date(dateTo));
-        
-        const statsResult = await statsRequest.query(statsQuery);
+        request.input('limit', sql.Int, validLimit);
+        request.input('offset', sql.Int, validOffset);
 
-        res.json({
-            success: true,
-            notifications: result.recordset,
-            stats: statsResult.recordset[0],
-            meta: {
-                limit: parseInt(limit),
-                offset: parseInt(offset)
-            }
-        });
+        const result = await request.query(query);
+        const notifications = result.recordsets[0].map(parseNotification);
+        const stats = result.recordsets[1][0];
+
+        res.json(successResponse(notifications, { ...stats, limit: validLimit, offset: validOffset }, 
+            'Admin sent notifications retrieved'));
 
     } catch (err) {
-        console.error('❌ Error fetching admin sent notifications:', err);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error fetching admin notifications.',
-            details: err.message
-        });
+        console.error('❌ Error fetching admin notifications:', err);
+        res.status(err.message.includes('Invalid') ? 400 : 500)
+            .json(errorResponse(err.message));
     }
 });
 
-// 🧹 CLEANUP OLD NOTIFICATIONS (older than 3 days)
+/**
+ * DELETE /notifications/cleanup
+ * Delete old notifications (older than specified days)
+ */
 router.delete('/cleanup', isAdmin, async (req, res) => {
-    console.log('🧹 Starting notification cleanup (older than 3 days)');
+    const { days = 3 } = req.body;
+
+    if (typeof days !== 'number' || days < 1) {
+        return res.status(400).json(errorResponse('Days must be a positive number'));
+    }
+
+    console.log(`🧹 Starting cleanup of notifications older than ${days} days`);
 
     try {
         const pool = getDbPool(req);
-        const request = pool.request();
 
         const query = `
             DELETE FROM Notifications 
-            WHERE CreatedAt < DATEADD(day, -3, GETDATE());
+            WHERE CreatedAt < DATEADD(day, -@days, GETDATE());
         `;
 
-        const result = await request.query(query);
+        const result = await pool.request()
+            .input('days', sql.Int, days)
+            .query(query);
 
         console.log(`🧹 Cleanup completed. Deleted ${result.rowsAffected[0]} old notifications`);
 
-        res.json({
-            success: true,
-            message: `Cleanup completed. ${result.rowsAffected[0]} old notifications deleted.`,
-            deletedCount: result.rowsAffected[0]
-        });
+        res.json(successResponse(null, null, `${result.rowsAffected[0]} notifications deleted`));
 
     } catch (err) {
-        console.error('❌ Error during notification cleanup:', err);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error during cleanup.',
-            details: err.message
-        });
+        console.error('❌ Error during cleanup:', err);
+        res.status(500).json(errorResponse(err.message));
     }
 });
 
-// 📊 GET NOTIFICATION STATISTICS (for admin dashboard)
+/**
+ * GET /notifications/admin/stats
+ * Get notification statistics for admin dashboard
+ */
 router.get('/admin/stats', isAdmin, async (req, res) => {
     console.log('📊 Fetching notification statistics');
 
     try {
         const pool = getDbPool(req);
-        const request = pool.request();
 
         const query = `
             SELECT 
@@ -446,33 +532,51 @@ router.get('/admin/stats', isAdmin, async (req, res) => {
             ORDER BY count DESC;
 
             SELECT TOP 10
+                u.UserID,
                 u.Username,
                 u.fullName,
-                COUNT(*) as notificationCount
+                COUNT(*) as notificationCount,
+                SUM(CASE WHEN IsRead = 0 THEN 1 ELSE 0 END) as unreadCount
             FROM Notifications n
             INNER JOIN Users u ON n.UserID = u.UserID
             GROUP BY u.UserID, u.Username, u.fullName
             ORDER BY notificationCount DESC;
         `;
 
-        const result = await request.query(query);
+        const result = await pool.request().query(query);
 
-        res.json({
-            success: true,
-            stats: {
-                overview: result.recordsets[0][0],
-                byType: result.recordsets[1],
-                topUsers: result.recordsets[2]
-            }
-        });
+        res.json(successResponse({
+            overview: result.recordsets[0][0],
+            byType: result.recordsets[1],
+            topUsers: result.recordsets[2]
+        }, null, 'Notification statistics retrieved'));
 
     } catch (err) {
         console.error('❌ Error fetching notification stats:', err);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error fetching stats.',
-            details: err.message
-        });
+        res.status(500).json(errorResponse(err.message));
+    }
+});
+
+/**
+ * GET /notifications/health
+ * Health check endpoint
+ */
+router.get('/health', async (req, res) => {
+    console.log('[HEALTH CHECK] Notification service health check');
+
+    try {
+        const pool = getDbPool(req);
+        const result = await pool.request()
+            .query('SELECT COUNT(*) as totalNotifications FROM Notifications;');
+
+        res.json(successResponse({
+            status: 'healthy',
+            totalNotifications: result.recordset[0].totalNotifications
+        }, null, 'Health check passed'));
+
+    } catch (err) {
+        console.error('❌ Health check failed:', err);
+        res.status(503).json(errorResponse('Service unavailable'));
     }
 });
 

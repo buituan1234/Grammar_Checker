@@ -1,33 +1,159 @@
-// backend/routes/statsRoutes.js
 import express from 'express';
+import sql from 'mssql';
+import rateLimit from 'express-rate-limit';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const router = express.Router();
 
-// Utility function to get database pool
+// ========== CONSTANTS ==========
+
+const LANGUAGE_NAMES = {
+  'en-US': 'English (US)', 'en': 'English', 'en-GB': 'English (UK)',
+  'fr': 'French', 'fr-FR': 'French (France)',
+  'de': 'German', 'de-DE': 'German (Germany)', 'de-AT': 'German (Austria)', 'de-CH': 'German (Switzerland)',
+  'ru': 'Russian', 'ru-RU': 'Russian', 'uk': 'Ukrainian', 'uk-UA': 'Ukrainian',
+  'ja': 'Japanese', 'ja-JP': 'Japanese',
+  'es': 'Spanish', 'es-ES': 'Spanish (Spain)',
+  'pt': 'Portuguese', 'pt-PT': 'Portuguese (Portugal)', 'pt-BR': 'Portuguese (Brazil)',
+  'gl-ES': 'Galician', 'it': 'Italian', 'it-IT': 'Italian',
+  'nl': 'Dutch', 'nl-NL': 'Dutch', 'pl': 'Polish', 'pl-PL': 'Polish',
+  'sv': 'Swedish', 'sv-SE': 'Swedish', 'da': 'Danish', 'da-DK': 'Danish',
+  'ar': 'Arabic', 'zh': 'Chinese', 'zh-CN': 'Chinese (Simplified)', 'zh-TW': 'Chinese (Traditional)',
+  'ko': 'Korean', 'ko-KR': 'Korean', 'vi': 'Vietnamese', 'th': 'Thai',
+  'be': 'Belarusian', 'be-BY': 'Belarusian', 'bg': 'Bulgarian', 'bg-BG': 'Bulgarian',
+  'sr': 'Serbian', 'sr-RS': 'Serbian', 'ca': 'Catalan', 'ca-ES': 'Catalan',
+  'cs': 'Czech', 'cs-CZ': 'Czech', 'el': 'Greek', 'el-GR': 'Greek',
+  'fa': 'Persian', 'fa-IR': 'Persian', 'fi': 'Finnish', 'fi-FI': 'Finnish',
+  'he': 'Hebrew', 'he-IL': 'Hebrew', 'hi': 'Hindi', 'hi-IN': 'Hindi',
+  'hu': 'Hungarian', 'hu-HU': 'Hungarian', 'id': 'Indonesian', 'id-ID': 'Indonesian',
+  'lt': 'Lithuanian', 'lt-LT': 'Lithuanian', 'lv': 'Latvian', 'lv-LV': 'Latvian',
+  'nb': 'Norwegian (Bokmål)', 'nb-NO': 'Norwegian (Bokmål)', 'ro': 'Romanian', 'ro-RO': 'Romanian',
+  'sk': 'Slovak', 'sk-SK': 'Slovak', 'sl': 'Slovenian', 'sl-SI': 'Slovenian',
+  'tr': 'Turkish', 'tr-TR': 'Turkish', 'unknown': 'Unknown'
+};
+
+const VALID_RANGES = ['hour', 'day', 'month', 'year'];
+const VALID_ACTIONS = /^[a-zA-Z0-9_]+$/;
+
+// ========== HELPER FUNCTIONS ==========
+
 function getDbPool(req) {
     if (!req.app.locals.db) {
-        console.error('Database pool not available in req.app.locals.db');
+        console.error('❌ Database pool not available');
         throw new Error('Database pool not available.');
     }
     return req.app.locals.db;
 }
 
-// Middleware to check if user is admin
+/**
+ * Unified success response
+ */
+const successResponse = (data, meta = null, message = null) => ({
+    success: true,
+    data,
+    meta,
+    message,
+    timestamp: new Date().toISOString()
+});
+
+/**
+ * Unified error response
+ */
+const errorResponse = (error, statusCode = 500, details = null) => ({
+    success: false,
+    error,
+    details: process.env.NODE_ENV !== 'production' ? details : undefined,
+    statusCode,
+    timestamp: new Date().toISOString()
+});
+
+/**
+ * Validate pagination parameters
+ */
+const validatePagination = (limit, offset) => {
+    const parsedLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 1000);
+    const parsedOffset = Math.max(parseInt(offset) || 0, 0);
+    return { limit: parsedLimit, offset: parsedOffset };
+};
+
+/**
+ * Validate and sanitize action parameter
+ */
+const validateAction = (action) => {
+    if (!action) return null;
+    
+    if (typeof action !== 'string') {
+        throw new Error('Action must be a string');
+    }
+    
+    if (action.length > 50) {
+        throw new Error('Action cannot exceed 50 characters');
+    }
+    
+    if (!VALID_ACTIONS.test(action)) {
+        throw new Error('Action contains invalid characters. Use only alphanumeric and underscore');
+    }
+    
+    return action;
+};
+
+/**
+ * Log admin actions
+ */
+const logAdminAction = (userId, endpoint, params) => {
+    console.log(`[ADMIN ACTION] User ${userId} accessed ${endpoint}`, {
+        params,
+        timestamp: new Date().toISOString()
+    });
+};
+
+// ========== MIDDLEWARE ==========
+
+/**
+ * Check admin authorization
+ */
 const isAdmin = (req, res, next) => {
+    console.log('🔐 Checking admin authorization...');
     const userRole = req.headers['x-user-role'] || req.body.userRole;
+    const userId = req.headers['x-user-id'] || req.body.userId;
+
     if (userRole === 'admin') {
+        req.authenticatedUser = { id: userId, role: userRole };
+        console.log('✅ Admin access granted');
         next();
     } else {
-        res.status(403).json({ 
-            success: false, 
-            error: 'Access denied. Admin privileges required.'
-        });
+        console.log(`❌ Admin access denied. Role: "${userRole}"`);
+        res.status(403).json(errorResponse('Admin privileges required', 403));
     }
 };
 
-// GET /api/stats/account-types - Account type statistics
+/**
+ * Rate limiting for stats endpoints
+ */
+const statsLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100,
+    message: 'Too many requests, please try again later',
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+router.use(statsLimiter);
+
+// ========== ROUTES ==========
+
+/**
+ * GET /stats/account-types
+ * Account type statistics
+ */
 router.get('/account-types', isAdmin, async (req, res) => {
+    console.log('[ACCOUNT TYPES] Fetching account type statistics');
+    
     try {
+        logAdminAction(req.authenticatedUser.id, '/account-types', {});
+
         const pool = getDbPool(req);
         const result = await pool.request().query(`
             SELECT 
@@ -49,311 +175,279 @@ router.get('/account-types', isAdmin, async (req, res) => {
             }))
         };
 
-        res.json({
-            success: true,
-            data: stats
-        });
+        res.json(successResponse(stats, null, 'Account types retrieved successfully'));
 
     } catch (err) {
-        console.error('Error fetching account type stats:', err);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error fetching account statistics.'
-        });
+        console.error('❌ Error fetching account types:', err.message);
+        res.status(500).json(errorResponse('Failed to fetch account statistics', 500, err.message));
     }
 });
 
-// GET /api/stats/languages - Language usage statistics
+/**
+ * GET /stats/languages
+ * Language usage statistics
+ */
 router.get('/languages', isAdmin, async (req, res) => {
-  try {
-    const pool = getDbPool(req);
-
-    // Thống kê số lần sử dụng theo ngôn ngữ từ bảng UsageLogs
-    const result = await pool.request().query(`
-      SELECT 
-        ISNULL(Language, 'unknown') AS language,
-        COUNT(*) AS usage_count
-      FROM UsageLogs
-      WHERE Action = 'grammar_check'
-      GROUP BY ISNULL(Language, 'unknown')
-      ORDER BY usage_count DESC;
-    `);
-
-    if (!result.recordset || result.recordset.length === 0) {
-      return res.json({
-        success: true,
-        data: {
-          total_usage: 0,
-          most_used: null,
-          least_used: null,
-          languages: []
-        }
-      });
-    }
-
-    // Bản đồ ngôn ngữ -> tên hiển thị
-    const languageMap = {
-      'en-US': 'English (US)',
-      'vi': 'Vietnamese',
-      'fr': 'French',
-      'de': 'German',
-      'es': 'Spanish',
-      'ja-JP': 'Japanese',
-      'unknown': 'Unknown'
-    };
-
-    const totalUsage = result.recordset.reduce((sum, item) => sum + item.usage_count, 0);
-
-    const stats = {
-      total_usage: totalUsage,
-      most_used: {
-        ...result.recordset[0],
-        language_name: languageMap[result.recordset[0].language] || result.recordset[0].language
-      },
-      least_used: {
-        ...result.recordset[result.recordset.length - 1],
-        language_name: languageMap[result.recordset[result.recordset.length - 1].language] || result.recordset[result.recordset.length - 1].language
-      },
-      languages: result.recordset.map(item => ({
-        language: item.language,
-        language_name: languageMap[item.language] || item.language,
-        usage_count: item.usage_count,
-        percentage: ((item.usage_count / totalUsage) * 100).toFixed(2)
-      }))
-    };
-
-    res.json({
-      success: true,
-      data: stats
-    });
-
-  } catch (err) {
-    console.error('Error fetching language stats:', err);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error fetching language statistics: ' + err.message
-    });
-  }
-});
-
-// GET /api/stats/timeframe?range=hour|day|month|year&action=login
-router.get('/timeframe', isAdmin, async (req, res) => {
-  try {
-    const { range = 'day', action } = req.query;
-    const pool = getDbPool(req);
-
-    if (!['hour', 'day', 'month', 'year'].includes(range)) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid range. Use: hour, day, month, or year"
-      });
-    }
-
-    // Nếu có action thì lọc, ví dụ action=login
-    const actionFilter = action ? `AND u.Action = '${action}'` : '';
-
-    let query = '';
-
-    switch (range) {
-      case 'hour': 
-        query = `
-          ;WITH Hours AS (
-            SELECT 0 AS h UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3
-            UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7
-            UNION ALL SELECT 8 UNION ALL SELECT 9 UNION ALL SELECT 10 UNION ALL SELECT 11
-            UNION ALL SELECT 12 UNION ALL SELECT 13 UNION ALL SELECT 14 UNION ALL SELECT 15
-            UNION ALL SELECT 16 UNION ALL SELECT 17 UNION ALL SELECT 18 UNION ALL SELECT 19
-            UNION ALL SELECT 20 UNION ALL SELECT 21 UNION ALL SELECT 22 UNION ALL SELECT 23
-          )
-          SELECT 
-            h AS period,
-            'Hour ' + CAST(h AS VARCHAR(2)) AS period_label,
-            COUNT(u.LogID) AS activity_count
-          FROM Hours h
-          LEFT JOIN UsageLogs u
-            ON DATEPART(HOUR, u.CreatedAt) = h.h
-           AND u.CreatedAt >= DATEADD(day, -1, GETDATE())
-           ${actionFilter}
-          GROUP BY h
-          ORDER BY h;
-        `;
-        break;
-
-      case 'day': 
-        query = `
-          ;WITH Days AS (
-            SELECT CAST(GETDATE() AS DATE) AS d
-            UNION ALL
-            SELECT DATEADD(DAY, -1, d) FROM Days WHERE d > DATEADD(DAY, -29, GETDATE())
-          )
-          SELECT 
-            d AS period,
-            FORMAT(d, 'MMM dd') AS period_label,
-            COUNT(u.LogID) AS activity_count
-          FROM Days
-          LEFT JOIN UsageLogs u
-            ON CAST(u.CreatedAt AS DATE) = d
-           ${actionFilter}
-          GROUP BY d
-          ORDER BY d;
-        `;
-        break;
-
-      case 'month': 
-        query = `
-          ;WITH Months AS (
-            SELECT DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1) AS m
-            UNION ALL
-            SELECT DATEADD(MONTH, -1, m) FROM Months WHERE m > DATEADD(MONTH, -11, GETDATE())
-          )
-          SELECT 
-            YEAR(m) * 100 + MONTH(m) AS period,
-            FORMAT(m, 'MMM yyyy') AS period_label,
-            COUNT(u.LogID) AS activity_count
-          FROM Months
-          LEFT JOIN UsageLogs u
-            ON YEAR(u.CreatedAt) = YEAR(m) 
-           AND MONTH(u.CreatedAt) = MONTH(m)
-           ${actionFilter}
-          GROUP BY m
-          ORDER BY m;
-        `;
-        break;
-
-      case 'year': 
-        query = `
-          ;WITH Years AS (
-            SELECT YEAR(GETDATE()) AS y
-            UNION ALL
-            SELECT y - 1 FROM Years WHERE y > YEAR(GETDATE()) - 4
-          )
-          SELECT 
-            y AS period,
-            CAST(y AS VARCHAR(4)) AS period_label,
-            COUNT(u.LogID) AS activity_count
-          FROM Years
-          LEFT JOIN UsageLogs u
-            ON YEAR(u.CreatedAt) = y
-           ${actionFilter}
-          GROUP BY y
-          ORDER BY y;
-        `;
-        break;
-    }
-
-    const result = await pool.request().query(query);
-
-    const stats = {
-      range,
-      total_activity: result.recordset.reduce((sum, item) => sum + item.activity_count, 0),
-      data: result.recordset.map(item => ({
-        period: item.period_label,
-        count: item.activity_count
-      }))
-    };
-
-    res.json({ success: true, data: stats });
-  } catch (err) {
-    console.error('Error fetching timeframe stats:', err);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error fetching timeframe statistics: ' + err.message
-    });
-  }
-});
-
-
-// GET /api/stats/overview - Dashboard overview stats
-router.get('/overview', isAdmin, async (req, res) => {
+    console.log('[LANGUAGES] Fetching language statistics');
+    
     try {
+        logAdminAction(req.authenticatedUser.id, '/languages', {});
+
         const pool = getDbPool(req);
-        
-        // Get multiple statistics in one go
         const result = await pool.request().query(`
-            -- Total users by status
+            SELECT 
+                ISNULL(Language, 'unknown') AS language,
+                COUNT(*) AS usage_count
+            FROM UsageLogs
+            WHERE Action = 'grammar_check'
+            GROUP BY ISNULL(Language, 'unknown')
+            ORDER BY usage_count DESC;
+        `);
+
+        if (!result.recordset || result.recordset.length === 0) {
+            const emptyStats = {
+                total_usage: 0,
+                most_used: null,
+                least_used: null,
+                languages: []
+            };
+            return res.json(successResponse(emptyStats, null, 'No language data available'));
+        }
+
+        const totalUsage = result.recordset.reduce((sum, item) => sum + item.usage_count, 0);
+        const stats = {
+            total_usage: totalUsage,
+            most_used: {
+                language: result.recordset[0].language,
+                language_name: LANGUAGE_NAMES[result.recordset[0].language] || result.recordset[0].language,
+                usage_count: result.recordset[0].usage_count
+            },
+            least_used: {
+                language: result.recordset[result.recordset.length - 1].language,
+                language_name: LANGUAGE_NAMES[result.recordset[result.recordset.length - 1].language] || result.recordset[result.recordset.length - 1].language,
+                usage_count: result.recordset[result.recordset.length - 1].usage_count
+            },
+            languages: result.recordset.map(item => ({
+                language: item.language,
+                language_name: LANGUAGE_NAMES[item.language] || item.language,
+                usage_count: item.usage_count,
+                percentage: (item.usage_count / totalUsage * 100).toFixed(2)
+            }))
+        };
+
+        res.json(successResponse(stats, null, 'Language statistics retrieved successfully'));
+
+    } catch (err) {
+        console.error('❌ Error fetching language stats:', err.message);
+        res.status(500).json(errorResponse('Failed to fetch language statistics', 500, err.message));
+    }
+});
+
+/**
+ * GET /stats/timeframe
+ * Statistics by timeframe with action filtering
+ * Query params: range=(hour|day|month|year), action=(optional)
+ */
+router.get('/timeframe', isAdmin, async (req, res) => {
+    console.log('[TIMEFRAME] Fetching timeframe statistics');
+    
+    try {
+        const { range = 'day', action } = req.query;
+
+        if (!VALID_RANGES.includes(range)) {
+            return res.status(400).json(
+                errorResponse('Invalid range. Use: hour, day, month, or year', 400)
+            );
+        }
+
+        const validatedAction = validateAction(action);
+        logAdminAction(req.authenticatedUser.id, '/timeframe', { range, action: validatedAction });
+
+        const pool = getDbPool(req);
+        let query = '';
+
+        switch (range) {
+            case 'hour': 
+                query = `
+                    SELECT 
+                        DATEPART(HOUR, u.CreatedAt) AS period,
+                        'Hour ' + CAST(DATEPART(HOUR, u.CreatedAt) AS VARCHAR(2)) AS period_label,
+                        COUNT(u.LogID) AS activity_count
+                    FROM UsageLogs u
+                    WHERE u.CreatedAt >= DATEADD(day, -1, GETDATE())
+                    ${validatedAction ? 'AND u.Action = @action' : ''}
+                    GROUP BY DATEPART(HOUR, u.CreatedAt)
+                    ORDER BY period;
+                `;
+                break;
+
+            case 'day': 
+                query = `
+                    SELECT 
+                        CAST(u.CreatedAt AS DATE) AS period,
+                        FORMAT(CAST(u.CreatedAt AS DATE), 'MMM dd') AS period_label,
+                        COUNT(u.LogID) AS activity_count
+                    FROM UsageLogs u
+                    WHERE u.CreatedAt >= DATEADD(day, -29, GETDATE())
+                    ${validatedAction ? 'AND u.Action = @action' : ''}
+                    GROUP BY CAST(u.CreatedAt AS DATE)
+                    ORDER BY period;
+                `;
+                break;
+
+            case 'month': 
+                query = `
+                    SELECT 
+                        YEAR(u.CreatedAt) * 100 + MONTH(u.CreatedAt) AS period,
+                        FORMAT(u.CreatedAt, 'MMM yyyy') AS period_label,
+                        COUNT(u.LogID) AS activity_count
+                    FROM UsageLogs u
+                    WHERE u.CreatedAt >= DATEADD(month, -11, GETDATE())
+                    ${validatedAction ? 'AND u.Action = @action' : ''}
+                    GROUP BY YEAR(u.CreatedAt), MONTH(u.CreatedAt)
+                    ORDER BY period;
+                `;
+                break;
+
+            case 'year': 
+                query = `
+                    SELECT 
+                        YEAR(u.CreatedAt) AS period,
+                        CAST(YEAR(u.CreatedAt) AS VARCHAR(4)) AS period_label,
+                        COUNT(u.LogID) AS activity_count
+                    FROM UsageLogs u
+                    WHERE u.CreatedAt >= DATEADD(year, -4, GETDATE())
+                    ${validatedAction ? 'AND u.Action = @action' : ''}
+                    GROUP BY YEAR(u.CreatedAt)
+                    ORDER BY period;
+                `;
+                break;
+        }
+
+        const request = pool.request();
+        if (validatedAction) {
+            request.input('action', sql.VarChar(50), validatedAction);
+        }
+
+        const result = await request.query(query);
+
+        const stats = {
+            range,
+            total_activity: result.recordset.reduce((sum, item) => sum + item.activity_count, 0),
+            data: result.recordset.map(item => ({
+                period: item.period_label,
+                count: item.activity_count
+            }))
+        };
+
+        res.json(successResponse(stats, null, 'Timeframe statistics retrieved successfully'));
+
+    } catch (err) {
+        console.error('❌ Error fetching timeframe stats:', err.message);
+        const statusCode = err.message.includes('Invalid') ? 400 : 500;
+        res.status(statusCode).json(errorResponse(err.message, statusCode, err.stack));
+    }
+});
+
+/**
+ * GET /stats/overview
+ * Dashboard overview statistics
+ */
+router.get('/overview', isAdmin, async (req, res) => {
+    console.log('[OVERVIEW] Fetching dashboard overview');
+    
+    try {
+        logAdminAction(req.authenticatedUser.id, '/overview', {});
+
+        const pool = getDbPool(req);
+        const result = await pool.request().query(`
             SELECT 'total_users' as stat_type, COUNT(*) as value
             FROM Users
             
             UNION ALL
             
-            -- Active users
             SELECT 'active_users' as stat_type, COUNT(*) as value
             FROM Users WHERE UserStatus = 'active'
             
             UNION ALL
             
-            -- Total notifications
             SELECT 'total_notifications' as stat_type, COUNT(*) as value
             FROM Notifications
             
             UNION ALL
             
-            -- Unread notifications
             SELECT 'unread_notifications' as stat_type, COUNT(*) as value
             FROM Notifications WHERE IsRead = 0
             
             UNION ALL
             
-            -- Users created today
             SELECT 'new_users_today' as stat_type, COUNT(*) as value
             FROM Users WHERE CAST(CreatedAt AS DATE) = CAST(GETDATE() AS DATE)
             
             UNION ALL
             
-            -- Users created this month
             SELECT 'new_users_this_month' as stat_type, COUNT(*) as value
             FROM Users 
             WHERE YEAR(CreatedAt) = YEAR(GETDATE()) 
             AND MONTH(CreatedAt) = MONTH(GETDATE())
         `);
 
-        // Transform result into object
         const stats = {};
         result.recordset.forEach(row => {
             stats[row.stat_type] = row.value;
         });
 
-        res.json({
-            success: true,
-            data: stats
-        });
+        res.json(successResponse(stats, null, 'Overview statistics retrieved successfully'));
 
     } catch (err) {
-        console.error('Error fetching overview stats:', err);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error fetching overview statistics.'
-        });
+        console.error('❌ Error fetching overview stats:', err.message);
+        res.status(500).json(errorResponse('Failed to fetch overview statistics', 500, err.message));
     }
 });
 
-// GET /api/stats/export - Export statistics to Excel
+/**
+ * GET /stats/export
+ * Export user statistics with pagination
+ */
 router.get('/export', isAdmin, async (req, res) => {
+    console.log('[EXPORT] Exporting statistics');
+    
     try {
-        const pool = getDbPool(req);
-        
-        // Get comprehensive data for export
-        const result = await pool.request().query(`
-            SELECT 
-                u.UserID,
-                u.Username,
-                u.Email,
-                u.UserRole,
-                u.AccountType,
-                u.UserStatus,
-                u.CreatedAt,
-                COUNT(n.NotificationID) as NotificationCount,
-                SUM(CASE WHEN n.IsRead = 0 THEN 1 ELSE 0 END) as UnreadNotifications
-            FROM Users u
-            LEFT JOIN Notifications n ON u.UserID = n.UserID
-            GROUP BY u.UserID, u.Username, u.Email, u.UserRole, u.AccountType, u.UserStatus, u.CreatedAt
-            ORDER BY u.CreatedAt DESC
-        `);
+        const { limit, offset } = req.query;
+        const { limit: validLimit, offset: validOffset } = validatePagination(limit, offset);
 
-        // Format data for export
+        logAdminAction(req.authenticatedUser.id, '/export', { limit: validLimit, offset: validOffset });
+
+        const pool = getDbPool(req);
+        const result = await pool.request()
+            .input('limit', sql.Int, validLimit)
+            .input('offset', sql.Int, validOffset)
+            .query(`
+                SELECT 
+                    u.UserID,
+                    u.Username,
+                    u.Email,
+                    u.UserRole,
+                    u.AccountType,
+                    u.UserStatus,
+                    u.CreatedAt,
+                    COUNT(n.NotificationID) as NotificationCount,
+                    SUM(CASE WHEN n.IsRead = 0 THEN 1 ELSE 0 END) as UnreadNotifications
+                FROM Users u
+                LEFT JOIN Notifications n ON u.UserID = n.UserID
+                GROUP BY u.UserID, u.Username, u.Email, u.UserRole, u.AccountType, u.UserStatus, u.CreatedAt
+                ORDER BY u.CreatedAt DESC
+                OFFSET @offset ROWS
+                FETCH NEXT @limit ROWS ONLY
+            `);
+
         const exportData = {
             export_date: new Date().toISOString(),
             total_records: result.recordset.length,
+            pagination: {
+                limit: validLimit,
+                offset: validOffset
+            },
             data: result.recordset.map(row => ({
                 user_id: row.UserID,
                 username: row.Username,
@@ -361,23 +455,46 @@ router.get('/export', isAdmin, async (req, res) => {
                 role: row.UserRole,
                 account_type: row.AccountType,
                 status: row.UserStatus,
-                created_at: row.CreatedAt,
-                notification_count: row.NotificationCount,
-                unread_notifications: row.UnreadNotifications
+                created_at: row.CreatedAt?.toISOString(),
+                notification_count: row.NotificationCount || 0,
+                unread_notifications: row.UnreadNotifications || 0
             }))
         };
 
-        res.json({
-            success: true,
-            data: exportData
-        });
+        res.json(successResponse(exportData, null, 'Export data retrieved successfully'));
 
     } catch (err) {
-        console.error('Error exporting stats:', err);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error exporting statistics.'
-        });
+        console.error('❌ Error exporting stats:', err.message);
+        res.status(500).json(errorResponse('Failed to export statistics', 500, err.message));
+    }
+});
+
+/**
+ * GET /stats/health
+ * Health check endpoint
+ */
+router.get('/health', isAdmin, async (req, res) => {
+    console.log('[HEALTH CHECK] Stats service health check');
+    
+    try {
+        const pool = getDbPool(req);
+        const result = await pool.request().query(`
+            SELECT 
+                COUNT(*) as total_records,
+                COUNT(DISTINCT UserID) as unique_users
+            FROM UsageLogs;
+        `);
+
+        res.json(successResponse({
+            status: 'healthy',
+            database: 'connected',
+            total_logs: result.recordset[0].total_records,
+            unique_users: result.recordset[0].unique_users
+        }, null, 'Health check passed'));
+
+    } catch (err) {
+        console.error('❌ Health check failed:', err.message);
+        res.status(503).json(errorResponse('Service unavailable', 503, err.message));
     }
 });
 

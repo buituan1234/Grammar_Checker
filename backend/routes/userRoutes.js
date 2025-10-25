@@ -294,7 +294,6 @@ router.put('/admin/update/:id', isAdmin, async (req, res) => {
         const result = await updateRequest.query(query);
 
         if (result.rowsAffected[0] > 0) {
-            // THÊM: Query lại user vừa update để trả về data mới với format đúng
             const updatedUserQuery = pool.request();
             updatedUserQuery.input('userId', sql.Int, userId);
                          
@@ -310,12 +309,9 @@ router.put('/admin/update/:id', isAdmin, async (req, res) => {
             console.log('✅ User updated successfully in database:', userId);
             console.log('📅 Updated user data:', updatedUserResult.recordset[0]);
 
-            // 🔔 CREATE NOTIFICATION for the updated user
+            // CREATE NOTIFICATION for the updated user
             try {
-                // Get admin ID from headers (you'll need to pass this from frontend)
                 const adminId = req.headers['x-admin-id'] || req.headers['x-user-id'];
-                
-                // Determine what changed
                 const changes = [];
                 if (currentUser.Username !== username) changes.push(`Username: ${currentUser.Username} → ${username}`);
                 if (currentUser.Email !== email) changes.push(`Email: ${currentUser.Email} → ${email}`);
@@ -439,7 +435,7 @@ router.post('/', isAdmin, async (req, res) => {
         const insertResult = await request.query(insertQuery);
         const newUserId = insertResult.recordset[0].NewUserID;
 
-        // 🔔 CREATE WELCOME NOTIFICATION
+        //CREATE WELCOME NOTIFICATION
         try {
             const adminId = req.headers['x-admin-id'] || req.headers['x-user-id'];
             
@@ -463,7 +459,6 @@ router.post('/', isAdmin, async (req, res) => {
             console.log('✅ Welcome notification created successfully');
         } catch (notificationError) {
             console.error('❌ Error creating welcome notification:', notificationError);
-            // Don't fail user creation if notification creation fails
         }
 
         console.log('✅ Admin created user successfully:', username);

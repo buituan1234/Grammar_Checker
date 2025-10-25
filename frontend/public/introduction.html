@@ -25,6 +25,10 @@
                 <i class="fas fa-spell-check"></i>
                 <span>Check Grammar</span>
             </a>
+            <a href="javascript:void(0)" class="sidebar-item" id="rewriteWithAIBtn">
+                <i class="fas fa-pen-fancy"></i>
+                <span>Rewrite with AI</span>
+            </a>
         </nav>
     </aside>
 
@@ -117,7 +121,75 @@
                     </div>
                 </div>
             </section>
-            
+
+            <!-- Rewrite Section -->
+            <section id="rewrite-section" style="display: none;">
+                <div class="rewrite-wrapper">
+                        <!-- Header -->
+                        <div class="rewrite-header">
+                            <button id="backFromRewriteBtn">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <h1>
+                                <i class="fas fa-pen-fancy"></i> Rewrite with AI
+                            </h1>
+                            <p>Transform your text with different tones and styles</p>
+                        </div>
+
+                <div class="rewrite-input-area">
+                    <div>
+                        <label for="rewriteTone">Select Tone:</label>
+                        <select id="rewriteTone" class="rewrite-select">
+                            <option value="professional">Professional - Formal and business-like</option>
+                            <option value="casual">Casual - Friendly and relaxed</option>
+                            <option value="academic">Academic - Scholarly and formal</option>
+                            <option value="creative">Creative - Engaging and imaginative</option>
+                            <option value="formal">Formal - Official and official</option>
+                            <option value="simplify">Simplify - Easy to understand</option>
+                        </select>
+                    </div>
+                    <div>
+                    <label for="rewriteText">Paste Your Text:</label>
+                        <textarea 
+                            id="rewriteText" 
+                            class="rewrite-textarea" 
+                            placeholder="Enter or paste your text here... (minimum 10 characters)"
+                            rows="10"
+                            ></textarea>
+                        <div>
+                            <span>Characters: <strong id="rewriteCharCount">0</strong></span> | 
+                            <span>Words: <strong id="rewriteWordCount">0</strong></span>
+                        </div>
+                    </div>
+
+                        <!-- Rewrite Button -->
+                        <button id="rewriteBtn" class="btn btn-primary">
+                            <i class="fas fa-pen-fancy"></i> Rewrite Text
+                        </button>
+                    </div>
+
+                        <!-- Results Area -->
+                        <div id="rewriteResults" style="display: none;">
+                            
+                            <h2>
+                                <i class="fas fa-check-circle"></i> Rewritten Text
+                            </h2>
+
+                            <div id="rewriteResultsContent" class="rewrite-result-box"></div>
+
+                            <!-- Copy Button -->
+                            <button id="copyRewriteBtn">
+                                <i class="fas fa-copy"></i> Copy to Clipboard
+                            </button>
+
+                            <!-- New Rewrite Button -->
+                            <button id="newRewriteBtn">
+                                <i class="fas fa-plus"></i> Rewrite Another Text
+                            </button>
+                        </div>
+                </div>
+            </section>
+
             <!-- Demo Grammar Checker Section -->
             <section id="demo" class="demo-section" style="display: none;">
                 <div class="section-content">
@@ -142,7 +214,6 @@
                                 <span><i class="fas fa-keyboard"></i> Characters: <strong id="demoCharCount">0</strong></span>
                             </div>
                             
-                            <!-- ✅ THÊM BUTTON GROUP -->
                             <div class="demo-button-group">
                                 <button id="demoCheckBtn" class="btn btn-primary demo-check-btn">
                                     <i class="fas fa-check-circle"></i> Check Grammar

@@ -1,0 +1,187 @@
+{
+  "verbConjugations": {
+    "имеет": {
+      "infinitive": "иметь",
+      "person": "3rd",
+      "number": "singular",
+      "tense": "present"
+    },
+    "имеют": {
+      "infinitive": "иметь",
+      "person": "3rd",
+      "number": "plural",
+      "tense": "present"
+    },
+    "имею": {
+      "infinitive": "иметь",
+      "person": "1st",
+      "number": "singular",
+      "tense": "present"
+    },
+    "имеешь": {
+      "infinitive": "иметь",
+      "person": "2nd",
+      "number": "singular",
+      "tense": "present"
+    },
+    "сказал": {
+      "infinitive": "сказать",
+      "gender": "masculine",
+      "number": "singular",
+      "tense": "past"
+    },
+    "сказала": {
+      "infinitive": "сказать",
+      "gender": "feminine",
+      "number": "singular",
+      "tense": "past"
+    },
+    "сказали": {
+      "infinitive": "сказать",
+      "number": "plural",
+      "tense": "past"
+    },
+    "есть": {
+      "infinitive": "быть",
+      "person": "3rd",
+      "tense": "present"
+    },
+    "является": {
+      "infinitive": "являться",
+      "person": "3rd",
+      "number": "singular",
+      "tense": "present"
+    },
+    "являются": {
+      "infinitive": "являться",
+      "person": "3rd",
+      "number": "plural",
+      "tense": "present"
+    }
+  },
+  "pronouns": {
+    "я": {
+      "person": "1st",
+      "number": "singular",
+      "gender": null
+    },
+    "ты": {
+      "person": "2nd",
+      "number": "singular",
+      "gender": null
+    },
+    "он": {
+      "person": "3rd",
+      "number": "singular",
+      "gender": "masculine"
+    },
+    "она": {
+      "person": "3rd",
+      "number": "singular",
+      "gender": "feminine"
+    },
+    "оно": {
+      "person": "3rd",
+      "number": "singular",
+      "gender": "neuter"
+    },
+    "мы": {
+      "person": "1st",
+      "number": "plural",
+      "gender": null
+    },
+    "вы": {
+      "person": "2nd",
+      "number": "plural",
+      "gender": null
+    },
+    "они": {
+      "person": "3rd",
+      "number": "plural",
+      "gender": null
+    }
+  },
+  "nounCases": {
+    "книга": {
+      "nominative": "книга",
+      "accusative": "книгу",
+      "genitive": "книги",
+      "dative": "книге"
+    },
+    "стол": {
+      "nominative": "стол",
+      "accusative": "стол",
+      "genitive": "стола"
+    },
+    "дом": {
+      "nominative": "дом",
+      "accusative": "дом",
+      "genitive": "дома"
+    }
+  },
+  "errorPatterns": [
+    {
+      "name": "gender_agreement_error",
+      "pattern": "\\b(он|она|оно)\\s+имеет\\s+(\\w+а)\\b",
+      "flags": "gi",
+      "type": "Grammar",
+      "message": "Subject-verb agreement error",
+      "shortMessage": "Gender/Person agreement error"
+    },
+    {
+      "name": "number_agreement_error",
+      "pattern": "\\b(он|она|оно)\\s+(сказали|сказал)\\b",
+      "flags": "gi",
+      "type": "Grammar",
+      "message": "Number or gender mismatch in verb conjugation",
+      "shortMessage": "Number agreement error"
+    },
+    {
+      "name": "case_agreement_error",
+      "pattern": "\\bимеет\\s+(\\w+а)\\b",
+      "flags": "gi",
+      "type": "Grammar",
+      "message": "After transitive verb 'имеет', noun should be in accusative case",
+      "shortMessage": "Case agreement error"
+    },
+    {
+      "name": "double_consonant",
+      "pattern": "\\b(дд|лл|сс|тт)\\b",
+      "flags": "g",
+      "type": "Spelling",
+      "message": "Double consonant (possible typo)",
+      "shortMessage": "Typo"
+    },
+    {
+      "name": "multiple_spaces",
+      "pattern": "\\s{2,}",
+      "flags": "g",
+      "type": "Formatting",
+      "message": "Multiple consecutive spaces",
+      "shortMessage": "Spacing error"
+    }
+  ],
+  "specificRules": [
+    {
+      "id": "she_skazal",
+      "pronoun": "она",
+      "verb": "сказал",
+      "correction": "сказала",
+      "message": "Gender mismatch: feminine pronoun 'она' requires feminine form 'сказала'"
+    },
+    {
+      "id": "singular_skazali",
+      "pronouns": ["он", "оно"],
+      "verb": "сказали",
+      "correction": "сказал",
+      "message": "Number mismatch: singular pronoun requires singular verb form"
+    },
+    {
+      "id": "imet_nominative",
+      "verb": "имеет",
+      "noun": "книга",
+      "correction": "книгу",
+      "message": "After transitive verb 'имеет', noun should be in accusative case: 'книгу' instead of 'книга'"
+    }
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "verbConjugations": {
+    "va": {
+      "infinitive": "ir",
+      "person": "3rd",
+      "number": "singular",
+      "tense": "present"
+    },
+    "van": {
+      "infinitive": "ir",
+      "person": "3rd",
+      "number": "plural",
+      "tense": "present"
+    },
+    "es": {
+      "infinitive": "ser",
+      "person": "3rd",
+      "number": "singular",
+      "tense": "present"
+    },
+    "son": {
+      "infinitive": "ser",
+      "person": "3rd",
+      "number": "plural",
+      "tense": "present"
+    },
+    "está": {
+      "infinitive": "estar",
+      "person": "3rd",
+      "number": "singular",
+      "tense": "present"
+    },
+    "están": {
+      "infinitive": "estar",
+      "person": "3rd",
+      "number": "plural",
+      "tense": "present"
+    }
+  },
+  "pronouns": {
+    "yo": {
+      "person": "1st",
+      "number": "singular"
+    },
+    "tú": {
+      "person": "2nd",
+      "number": "singular"
+    },
+    "él": {
+      "person": "3rd",
+      "number": "singular",
+      "gender": "masculine"
+    },
+    "ella": {
+      "person": "3rd",
+      "number": "singular",
+      "gender": "feminine"
+    },
+    "nosotros": {
+      "person": "1st",
+      "number": "plural"
+    },
+    "vosotros": {
+      "person": "2nd",
+      "number": "plural"
+    },
+    "ellos": {
+      "person": "3rd",
+      "number": "plural",
+      "gender": "masculine"
+    },
+    "ellas": {
+      "person": "3rd",
+      "number": "plural",
+      "gender": "feminine"
+    }
+  },
+  "articles": {
+    "el": {
+      "number": "singular",
+      "gender": "masculine"
+    },
+    "la": {
+      "number": "singular",
+      "gender": "feminine"
+    },
+    "los": {
+      "number": "plural",
+      "gender": "masculine"
+    },
+    "las": {
+      "number": "plural",
+      "gender": "feminine"
+    }
+  },
+  "errorPatterns": [
+    {
+      "name": "subject_verb_agreement",
+      "pattern": "(El|La|Un|Una)\\s+(\\w+)\\s+(van|son|están)",
+      "flags": "gi",
+      "type": "Grammar",
+      "message": "Subject-verb agreement error",
+      "shortMessage": "Agreement error"
+    },
+    {
+      "name": "multiple_spaces",
+      "pattern": "\\s{2,}",
+      "flags": "g",
+      "type": "Formatting",
+      "message": "Multiple consecutive spaces",
+      "shortMessage": "Spacing error"
+    }
+  ],
+  "specificRules": [
+    {
+      "id": "el_niño_van",
+      "article": "El",
+      "noun": "niño",
+      "verb": "van",
+      "correction": "va",
+      "message": "Subject-verb agreement error: singular subject 'El niño' requires singular verb 'va'"
+    },
+    {
+      "id": "la_niña_van",
+      "article": "La",
+      "noun": "niña",
+      "verb": "van",
+      "correction": "va",
+      "message": "Subject-verb agreement error: singular subject 'La niña' requires singular verb 'va'"
+    },
+    {
+      "id": "un_niño_van",
+      "article": "Un",
+      "noun": "niño",
+      "verb": "van",
+      "correction": "va",
+      "message": "Subject-verb agreement error: singular subject 'Un niño' requires singular verb 'va'"
+    }
+  ]
+}

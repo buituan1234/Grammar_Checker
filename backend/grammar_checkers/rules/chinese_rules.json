@@ -1,0 +1,171 @@
+{
+  "measureWords": {
+    "个": [
+      "人",
+      "东西",
+      "问题",
+      "地方",
+      "房间",
+      "学生",
+      "月",
+      "星期",
+      "天"
+    ],
+    "本": [
+      "书",
+      "杂志",
+      "字典",
+      "笔记",
+      "论文"
+    ],
+    "只": [
+      "猫",
+      "狗",
+      "鸟",
+      "鸡",
+      "鸭",
+      "鹅",
+      "眼睛",
+      "手",
+      "脚"
+    ],
+    "辆": [
+      "车",
+      "汽车",
+      "自行车",
+      "摩托车",
+      "公交车"
+    ],
+    "件": [
+      "衣服",
+      "事情",
+      "礼物",
+      "行李",
+      "装备"
+    ],
+    "张": [
+      "纸",
+      "桌子",
+      "椅子",
+      "床",
+      "桌",
+      "票",
+      "照片"
+    ],
+    "条": [
+      "鱼",
+      "狗",
+      "蛇",
+      "路",
+      "河",
+      "裤子",
+      "毛巾"
+    ],
+    "对": [
+      "夫妻",
+      "情侣",
+      "朋友",
+      "鞋"
+    ],
+    "队": [
+      "队伍",
+      "军队"
+    ],
+    "组": [
+      "团队",
+      "组织",
+      "数据"
+    ]
+  },
+  "particles": {
+    "的": "possessive/attributive marker",
+    "了": "aspect marker (completion)",
+    "在": "progressive marker",
+    "被": "passive voice marker",
+    "把": "object-fronting marker",
+    "呢": "question marker",
+    "吗": "yes/no question marker",
+    "吧": "suggestion marker"
+  },
+  "errorPatterns": [
+    {
+      "name": "duplicate_particle",
+      "pattern": "(的|了|在){2,}",
+      "flags": "g",
+      "type": "Grammar",
+      "message": "Duplicate particle detected",
+      "shortMessage": "Duplicate word"
+    },
+    {
+      "name": "number_without_measure",
+      "pattern": "(\\d+|一|两|三|四|五|六|七|八|九|十)(?![个本只辆件张条对队组块片场种族群])",
+      "flags": "g",
+      "type": "Grammar",
+      "message": "Missing measure word between number and noun",
+      "shortMessage": "Missing measure word",
+      "suggestions": ["个", "本", "只", "辆", "件"]
+    },
+    {
+      "name": "duplicate_le",
+      "pattern": "了了",
+      "flags": "g",
+      "type": "Grammar",
+      "message": "Duplicate tense marker 了",
+      "shortMessage": "Duplicate particle",
+      "fix": "了"
+    },
+    {
+      "name": "double_de",
+      "pattern": "的的",
+      "flags": "g",
+      "type": "Grammar",
+      "message": "Repeated possessive particle",
+      "shortMessage": "Duplicate word",
+      "fix": "的"
+    },
+    {
+      "name": "missing_punctuation",
+      "pattern": "[。！？]",
+      "flags": "g",
+      "type": "Punctuation",
+      "checkMissing": true,
+      "message": "Missing or incomplete punctuation",
+      "shortMessage": "Punctuation error",
+      "suggestion": "。"
+    }
+  ],
+  "commonMistakes": [
+    {
+      "id": "shi_very_beautiful",
+      "pattern": "她是非常漂亮。",
+      "error": "Potential word order issue: '是' in this context may be awkward",
+      "suggestion": "她非常漂亮。or 她是一个非常漂亮的女孩。",
+      "type": "Style"
+    },
+    {
+      "id": "measure_word_misuse",
+      "pattern": "\\b(\\d+)(个)?(本)?(只)?(辆)?(件)?(张)?(条)?",
+      "error": "Measure word usage needs review",
+      "type": "Grammar"
+    }
+  ],
+  "nounExamples": [
+    "人",
+    "书",
+    "猫",
+    "车",
+    "衣服",
+    "纸",
+    "鱼"
+  ],
+  "verbExamples": [
+    "吃",
+    "喝",
+    "看",
+    "听",
+    "读",
+    "写",
+    "找",
+    "给"
+  ]
+}

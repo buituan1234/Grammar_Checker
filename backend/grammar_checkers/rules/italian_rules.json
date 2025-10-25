@@ -1,0 +1,145 @@
+{
+  "verbConjugations": {
+    "va": {
+      "infinitive": "andare",
+      "person": "3rd",
+      "number": "singular",
+      "tense": "present"
+    },
+    "vanno": {
+      "infinitive": "andare",
+      "person": "3rd",
+      "number": "plural",
+      "tense": "present"
+    },
+    "è": {
+      "infinitive": "essere",
+      "person": "3rd",
+      "number": "singular",
+      "tense": "present"
+    },
+    "sono": {
+      "infinitive": "essere",
+      "person": "3rd",
+      "number": "plural",
+      "tense": "present"
+    },
+    "sta": {
+      "infinitive": "stare",
+      "person": "3rd",
+      "number": "singular",
+      "tense": "present"
+    },
+    "stanno": {
+      "infinitive": "stare",
+      "person": "3rd",
+      "number": "plural",
+      "tense": "present"
+    }
+  },
+  "pronouns": {
+    "io": {
+      "person": "1st",
+      "number": "singular"
+    },
+    "tu": {
+      "person": "2nd",
+      "number": "singular"
+    },
+    "lui": {
+      "person": "3rd",
+      "number": "singular",
+      "gender": "masculine"
+    },
+    "lei": {
+      "person": "3rd",
+      "number": "singular",
+      "gender": "feminine"
+    },
+    "noi": {
+      "person": "1st",
+      "number": "plural"
+    },
+    "voi": {
+      "person": "2nd",
+      "number": "plural"
+    },
+    "loro": {
+      "person": "3rd",
+      "number": "plural"
+    }
+  },
+  "articles": {
+    "il": {
+      "number": "singular",
+      "gender": "masculine"
+    },
+    "lo": {
+      "number": "singular",
+      "gender": "masculine"
+    },
+    "la": {
+      "number": "singular",
+      "gender": "feminine"
+    },
+    "i": {
+      "number": "plural",
+      "gender": "masculine"
+    },
+    "gli": {
+      "number": "plural",
+      "gender": "masculine"
+    },
+    "le": {
+      "number": "plural",
+      "gender": "feminine"
+    }
+  },
+  "commonWords": {
+    "vano": {
+      "type": "invalid",
+      "suggestion": "vano is not a valid verb form",
+      "commonMistakes": ["va", "van", "vanno"]
+    },
+    "sono": {
+      "type": "verb",
+      "meaning": "am/are"
+    },
+    "stanno": {
+      "type": "verb",
+      "meaning": "are (location)"
+    }
+  },
+  "errorPatterns": [
+    {
+      "name": "invalid_verb_form",
+      "pattern": "(vano|vain|vain)",
+      "flags": "gi",
+      "type": "Spelling",
+      "message": "Invalid verb form",
+      "shortMessage": "Spelling error"
+    },
+    {
+      "name": "multiple_spaces",
+      "pattern": "\\s{2,}",
+      "flags": "g",
+      "type": "Formatting",
+      "message": "Multiple consecutive spaces",
+      "shortMessage": "Spacing error"
+    }
+  ],
+  "specificRules": [
+    {
+      "id": "vano_spelling",
+      "word": "vano",
+      "suggestions": ["va", "van", "vanno"],
+      "message": "'vano' is not a valid Italian verb form. Did you mean 'va' (singular) or 'vanno' (plural)?"
+    },
+    {
+      "id": "lui_parco",
+      "pattern": "Lui (vano|vain)",
+      "correction": "va",
+      "message": "Spelling error: 'vano' is not a valid verb form. Use 'va' for singular."
+    }
+  ]
+}
