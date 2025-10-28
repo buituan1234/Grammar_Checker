@@ -51,7 +51,6 @@ input:invalid:hover {
     outline: none !important;
 }
 
-/* Custom error styling */
 input.custom-error {
     border-color: #667eea !important;
 }
@@ -69,7 +68,6 @@ input, select {
     appearance: none !important;
 }
 
-/* Error message styling */
 .error-message,
 .error-text {
     color: #dc3545;
@@ -79,13 +77,11 @@ input, select {
     font-weight: 500;
 }
 
-/* Password field specific */
 input[type="password"] {
     font-family: 'Courier New', monospace !important;
     letter-spacing: 0.1em !important;
 }
 
-/* Hover state */
 input[type="text"]:hover, 
 input[type="email"]:hover, 
 input[type="tel"]:hover, 
@@ -94,7 +90,6 @@ select:hover {
     border-color: #4f46e5 !important;
 }
 
-/* Disabled state */
 input:disabled, select:disabled {
     background-color: #f3f4f6 !important;
     border-color: #d1d5db !important;
@@ -102,7 +97,6 @@ input:disabled, select:disabled {
     opacity: 0.6 !important;
 }
 
-/* Autocomplete dropdown styling */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
@@ -111,14 +105,12 @@ input:-webkit-autofill:focus {
     border-color: #667eea !important;
 }
 
-/* Placeholder styling */
 input::placeholder, select::placeholder {
     color: #9ca3af !important;
     opacity: 1 !important;
     font-style: italic !important;
 }
 
-/* Remove default browser styling */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
     -webkit-appearance: none !important;
@@ -131,7 +123,6 @@ input[type=number] {
     appearance: textfield !important;         
 }
 
-/* Search container */
 .search-container {
   margin-bottom: 1.5rem;
   position: relative;
@@ -182,7 +173,6 @@ input[type=number] {
   color: #667eea;
 }
 
-/* Form actions */
 .form-actions {
   display: flex;
   gap: 1rem;
@@ -196,13 +186,11 @@ input[type=number] {
   min-height: 44px;
 }
 
-/* Form container for stability */
 .form-container {
     transform: translateZ(0);
     backface-visibility: hidden;
 }
 
-/* Modal specific fixes */
 .modal input, .modal select {
     border: 2px solid #667eea !important;
     background: white !important;
@@ -212,13 +200,11 @@ input[type=number] {
     margin-bottom: 1.2rem;
 }
 
-/* Animation fixes */
 input, select {
     transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
     will-change: border-color, box-shadow !important;
 }
 
-/* Focus styles for accessibility */
 input:focus,
 select:focus {
   outline: 2px solid #667eea;

@@ -188,7 +188,7 @@
   }
 }
 
-/* DESKTOP: SIDEBAR LUÔN HIỂN THỊ */
+/* DESKTOP*/
 @media (min-width: 1024px) {
   .sidebar {
     transform: translateX(0) !important;

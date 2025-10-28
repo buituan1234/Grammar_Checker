@@ -28,7 +28,6 @@ nav {
     gap: 15px;
 }
 
-/* Sidebar toggle button */
 .sidebar-toggle {
     display: inline-flex;
     align-items: center;

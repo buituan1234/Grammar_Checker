@@ -82,7 +82,7 @@
 
 /* FAQ Animation States */
 .faq-item.expanded .accordion-content {
-    max-height: 200px; /* Adjust based on content */
+    max-height: 200px; 
 }
 
 .faq-item.collapsed .accordion-content {

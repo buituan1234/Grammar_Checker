@@ -122,67 +122,68 @@
                 </div>
             </section>
 
-            <!-- Rewrite Section -->
-            <section id="rewrite-section" style="display: none;">
-                <div class="rewrite-wrapper">
-                        <div class="rewrite-header">
-                            <button id="backFromRewriteBtn">
-                                <i class="fas fa-arrow-left"></i>
-                            </button>
-                            <h1>
-                                <i class="fas fa-pen-fancy"></i> Rewrite with AI
-                            </h1>
-                            <p>Transform your text with different tones and styles</p>
-                        </div>
+                <!-- Rewrite Section - FIXED STRUCTURE -->
+<section id="rewrite-section" style="display: none;">
+    <div class="rewrite-wrapper">
+        <!-- Back button OUTSIDE header -->
+        <button id="backFromRewriteBtn">
+            <i class="fas fa-arrow-left"></i>
+        </button>
 
-                <div class="rewrite-input-area">
-                    <div>
-                        <label for="rewriteTone">Select Tone:</label>
-                        <select id="rewriteTone" class="rewrite-select">
-                            <option value="professional">Professional - Formal and business-like</option>
-                            <option value="casual">Casual - Friendly and relaxed</option>
-                            <option value="academic">Academic - Scholarly and formal</option>
-                            <option value="creative">Creative - Engaging and imaginative</option>
-                            <option value="formal">Formal - Official and official</option>
-                            <option value="simplify">Simplify - Easy to understand</option>
-                        </select>
-                    </div>
-                    <div>
-                    <label for="rewriteText">Paste Your Text:</label>
-                        <textarea 
-                            id="rewriteText" 
-                            class="rewrite-textarea" 
-                            placeholder="Enter or paste your text here... (minimum 10 characters)"
-                            rows="10"
-                            ></textarea>
-                        <div>
-                            <span>Characters: <strong id="rewriteCharCount">0</strong></span> | 
-                            <span>Words: <strong id="rewriteWordCount">0</strong></span>
-                        </div>
-                    </div>
+        <div class="rewrite-header">
+            <h1>
+                <i class="fas fa-pen-fancy"></i> Rewrite with AI
+            </h1>
+            <p>Transform your text with different tones and styles</p>
+        </div>
 
-                        <!-- Rewrite Button -->
-                        <button id="rewriteBtn" class="btn btn-primary">
-                            <i class="fas fa-pen-fancy"></i> Rewrite Text
-                        </button>
-                    </div>
-
-                        <div id="rewriteResults" style="display: none;">
-                            
-                            <h2>
-                                <i class="fas fa-check-circle"></i> Rewritten Text
-                            </h2>
-
-                            <div id="rewriteResultsContent" class="rewrite-result-box"></div>
-                            <button id="copyRewriteBtn">
-                                <i class="fas fa-copy"></i> Copy to Clipboard
-                            </button>
-                            <button id="newRewriteBtn">
-                                <i class="fas fa-plus"></i> Rewrite Another Text
-                            </button>
-                        </div>
+        <div class="rewrite-input-area">
+            <div>
+                <label for="rewriteTone">Select Tone:</label>
+                <select id="rewriteTone" class="rewrite-select">
+                    <option value="professional">Professional - Formal and business-like</option>
+                    <option value="casual">Casual - Friendly and relaxed</option>
+                    <option value="academic">Academic - Scholarly and formal</option>
+                    <option value="creative">Creative - Engaging and imaginative</option>
+                    <option value="formal">Formal - Official and official</option>
+                    <option value="simplify">Simplify - Easy to understand</option>
+                </select>
+            </div>
+            <div>
+                <label for="rewriteText">Paste Your Text:</label>
+                <textarea 
+                    id="rewriteText" 
+                    class="rewrite-textarea" 
+                    placeholder="Enter or paste your text here... (minimum 10 characters)"
+                    rows="10"
+                ></textarea>
+                <div>
+                    <span>Characters: <strong id="rewriteCharCount">0</strong></span> | 
+                    <span>Words: <strong id="rewriteWordCount">0</strong></span>
                 </div>
-            </section>
+            </div>
+
+            <!-- Rewrite Button -->
+            <button id="rewriteBtn" class="btn btn-primary">
+                <i class="fas fa-pen-fancy"></i> Rewrite Text
+            </button>
+        </div>
+
+        <div id="rewriteResults" style="display: none;">
+            <h2>
+                <i class="fas fa-check-circle"></i> Rewritten Text
+            </h2>
+
+            <div id="rewriteResultsContent" class="rewrite-result-box"></div>
+            <button id="copyRewriteBtn">
+                <i class="fas fa-copy"></i> Copy to Clipboard
+            </button>
+            <button id="newRewriteBtn">
+                <i class="fas fa-plus"></i> Rewrite Another Text
+            </button>
+        </div>
+    </div>
+</section>            
 
             <!-- Demo Grammar Checker Section -->
             <section id="demo" class="demo-section" style="display: none;">
