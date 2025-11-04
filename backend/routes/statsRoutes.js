@@ -47,9 +47,6 @@ function getDbPool(req) {
     return req.app.locals.db;
 }
 
-/**
- * Unified success response
- */
 const successResponse = (data, meta = null, message = null) => ({
     success: true,
     data,
@@ -58,9 +55,6 @@ const successResponse = (data, meta = null, message = null) => ({
     timestamp: new Date().toISOString()
 });
 
-/**
- * Unified error response
- */
 const errorResponse = (error, statusCode = 500, details = null) => ({
     success: false,
     error,
@@ -69,39 +63,20 @@ const errorResponse = (error, statusCode = 500, details = null) => ({
     timestamp: new Date().toISOString()
 });
 
-/**
- * Validate pagination parameters
- */
 const validatePagination = (limit, offset) => {
     const parsedLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 1000);
     const parsedOffset = Math.max(parseInt(offset) || 0, 0);
     return { limit: parsedLimit, offset: parsedOffset };
 };
 
-/**
- * Validate and sanitize action parameter
- */
 const validateAction = (action) => {
     if (!action) return null;
-    
-    if (typeof action !== 'string') {
-        throw new Error('Action must be a string');
-    }
-    
-    if (action.length > 50) {
-        throw new Error('Action cannot exceed 50 characters');
-    }
-    
-    if (!VALID_ACTIONS.test(action)) {
-        throw new Error('Action contains invalid characters. Use only alphanumeric and underscore');
-    }
-    
+    if (typeof action !== 'string') throw new Error('Action must be a string');
+    if (action.length > 50) throw new Error('Action cannot exceed 50 characters');
+    if (!VALID_ACTIONS.test(action)) throw new Error('Action contains invalid characters');
     return action;
 };
 
-/**
- * Log admin actions
- */
 const logAdminAction = (userId, endpoint, params) => {
     console.log(`[ADMIN ACTION] User ${userId} accessed ${endpoint}`, {
         params,
@@ -111,17 +86,12 @@ const logAdminAction = (userId, endpoint, params) => {
 
 // ========== MIDDLEWARE ==========
 
-/**
- * Check admin authorization
- */
 const isAdmin = (req, res, next) => {
-    console.log('🔐 Checking admin authorization...');
     const userRole = req.headers['x-user-role'] || req.body.userRole;
     const userId = req.headers['x-user-id'] || req.body.userId;
 
     if (userRole === 'admin') {
         req.authenticatedUser = { id: userId, role: userRole };
-        console.log('✅ Admin access granted');
         next();
     } else {
         console.log(`❌ Admin access denied. Role: "${userRole}"`);
@@ -129,11 +99,8 @@ const isAdmin = (req, res, next) => {
     }
 };
 
-/**
- * Rate limiting for stats endpoints
- */
 const statsLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 15 * 60 * 1000,
     max: 100,
     message: 'Too many requests, please try again later',
     standardHeaders: true,
@@ -146,11 +113,8 @@ router.use(statsLimiter);
 
 /**
  * GET /stats/account-types
- * Account type statistics
  */
-router.get('/account-types', isAdmin, async (req, res) => {
-    console.log('[ACCOUNT TYPES] Fetching account type statistics');
-    
+router.get('/account-types', isAdmin, async (req, res) => {    
     try {
         logAdminAction(req.authenticatedUser.id, '/account-types', {});
 
@@ -185,7 +149,6 @@ router.get('/account-types', isAdmin, async (req, res) => {
 
 /**
  * GET /stats/languages
- * Language usage statistics
  */
 router.get('/languages', isAdmin, async (req, res) => {
     console.log('[LANGUAGES] Fetching language statistics');
@@ -194,6 +157,7 @@ router.get('/languages', isAdmin, async (req, res) => {
         logAdminAction(req.authenticatedUser.id, '/languages', {});
 
         const pool = getDbPool(req);
+        
         const result = await pool.request().query(`
             SELECT 
                 ISNULL(Language, 'unknown') AS language,
@@ -245,12 +209,8 @@ router.get('/languages', isAdmin, async (req, res) => {
 
 /**
  * GET /stats/timeframe
- * Statistics by timeframe with action filtering
- * Query params: range=(hour|day|month|year), action=(optional)
  */
-router.get('/timeframe', isAdmin, async (req, res) => {
-    console.log('[TIMEFRAME] Fetching timeframe statistics');
-    
+router.get('/timeframe', isAdmin, async (req, res) => {    
     try {
         const { range = 'day', action } = req.query;
 
@@ -270,13 +230,13 @@ router.get('/timeframe', isAdmin, async (req, res) => {
             case 'hour': 
                 query = `
                     SELECT 
-                        DATEPART(HOUR, u.CreatedAt) AS period,
-                        'Hour ' + CAST(DATEPART(HOUR, u.CreatedAt) AS VARCHAR(2)) AS period_label,
-                        COUNT(u.LogID) AS activity_count
-                    FROM UsageLogs u
-                    WHERE u.CreatedAt >= DATEADD(day, -1, GETDATE())
-                    ${validatedAction ? 'AND u.Action = @action' : ''}
-                    GROUP BY DATEPART(HOUR, u.CreatedAt)
+                        DATEPART(HOUR, CreatedAt) AS period,
+                        'Hour ' + CAST(DATEPART(HOUR, CreatedAt) AS VARCHAR(2)) AS period_label,
+                        COUNT(LogID) AS activity_count
+                    FROM UsageLogs
+                    WHERE CreatedAt >= DATEADD(day, -1, GETDATE())
+                    ${validatedAction ? 'AND Action = @action' : ''}
+                    GROUP BY DATEPART(HOUR, CreatedAt)
                     ORDER BY period;
                 `;
                 break;
@@ -284,13 +244,13 @@ router.get('/timeframe', isAdmin, async (req, res) => {
             case 'day': 
                 query = `
                     SELECT 
-                        CAST(u.CreatedAt AS DATE) AS period,
-                        FORMAT(CAST(u.CreatedAt AS DATE), 'MMM dd') AS period_label,
-                        COUNT(u.LogID) AS activity_count
-                    FROM UsageLogs u
-                    WHERE u.CreatedAt >= DATEADD(day, -29, GETDATE())
-                    ${validatedAction ? 'AND u.Action = @action' : ''}
-                    GROUP BY CAST(u.CreatedAt AS DATE)
+                        CAST(CreatedAt AS DATE) AS period,
+                        FORMAT(CAST(CreatedAt AS DATE), 'MMM dd') AS period_label,
+                        COUNT(LogID) AS activity_count
+                    FROM UsageLogs
+                    WHERE CreatedAt >= DATEADD(day, -29, GETDATE())
+                    ${validatedAction ? 'AND Action = @action' : ''}
+                    GROUP BY CAST(CreatedAt AS DATE)
                     ORDER BY period;
                 `;
                 break;
@@ -298,13 +258,13 @@ router.get('/timeframe', isAdmin, async (req, res) => {
             case 'month': 
                 query = `
                     SELECT 
-                        YEAR(u.CreatedAt) * 100 + MONTH(u.CreatedAt) AS period,
-                        FORMAT(u.CreatedAt, 'MMM yyyy') AS period_label,
-                        COUNT(u.LogID) AS activity_count
-                    FROM UsageLogs u
-                    WHERE u.CreatedAt >= DATEADD(month, -11, GETDATE())
-                    ${validatedAction ? 'AND u.Action = @action' : ''}
-                    GROUP BY YEAR(u.CreatedAt), MONTH(u.CreatedAt)
+                        YEAR(CreatedAt) * 100 + MONTH(CreatedAt) AS period,
+                        DATENAME(MONTH, CreatedAt) + ' ' + CAST(YEAR(CreatedAt) AS VARCHAR) AS period_label,
+                        COUNT(LogID) AS activity_count
+                    FROM UsageLogs
+                    WHERE CreatedAt >= DATEADD(month, -11, GETDATE())
+                    ${validatedAction ? 'AND Action = @action' : ''}
+                    GROUP BY YEAR(CreatedAt), MONTH(CreatedAt), DATENAME(MONTH, CreatedAt)
                     ORDER BY period;
                 `;
                 break;
@@ -312,13 +272,13 @@ router.get('/timeframe', isAdmin, async (req, res) => {
             case 'year': 
                 query = `
                     SELECT 
-                        YEAR(u.CreatedAt) AS period,
-                        CAST(YEAR(u.CreatedAt) AS VARCHAR(4)) AS period_label,
-                        COUNT(u.LogID) AS activity_count
-                    FROM UsageLogs u
-                    WHERE u.CreatedAt >= DATEADD(year, -4, GETDATE())
-                    ${validatedAction ? 'AND u.Action = @action' : ''}
-                    GROUP BY YEAR(u.CreatedAt)
+                        YEAR(CreatedAt) AS period,
+                        CAST(YEAR(CreatedAt) AS VARCHAR(4)) AS period_label,
+                        COUNT(LogID) AS activity_count
+                    FROM UsageLogs
+                    WHERE CreatedAt >= DATEADD(year, -4, GETDATE())
+                    ${validatedAction ? 'AND Action = @action' : ''}
+                    GROUP BY YEAR(CreatedAt)
                     ORDER BY period;
                 `;
                 break;
@@ -344,6 +304,7 @@ router.get('/timeframe', isAdmin, async (req, res) => {
 
     } catch (err) {
         console.error('❌ Error fetching timeframe stats:', err.message);
+        console.error('Stack:', err.stack);
         const statusCode = err.message.includes('Invalid') ? 400 : 500;
         res.status(statusCode).json(errorResponse(err.message, statusCode, err.stack));
     }
@@ -351,11 +312,8 @@ router.get('/timeframe', isAdmin, async (req, res) => {
 
 /**
  * GET /stats/overview
- * Dashboard overview statistics
  */
-router.get('/overview', isAdmin, async (req, res) => {
-    console.log('[OVERVIEW] Fetching dashboard overview');
-    
+router.get('/overview', isAdmin, async (req, res) => {    
     try {
         logAdminAction(req.authenticatedUser.id, '/overview', {});
 
@@ -407,11 +365,8 @@ router.get('/overview', isAdmin, async (req, res) => {
 
 /**
  * GET /stats/export
- * Export user statistics with pagination
  */
-router.get('/export', isAdmin, async (req, res) => {
-    console.log('[EXPORT] Exporting statistics');
-    
+router.get('/export', isAdmin, async (req, res) => {    
     try {
         const { limit, offset } = req.query;
         const { limit: validLimit, offset: validOffset } = validatePagination(limit, offset);
@@ -471,11 +426,8 @@ router.get('/export', isAdmin, async (req, res) => {
 
 /**
  * GET /stats/health
- * Health check endpoint
  */
-router.get('/health', isAdmin, async (req, res) => {
-    console.log('[HEALTH CHECK] Stats service health check');
-    
+router.get('/health', isAdmin, async (req, res) => {    
     try {
         const pool = getDbPool(req);
         const result = await pool.request().query(`

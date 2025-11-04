@@ -7,44 +7,48 @@
 
 // API management functions
 const AdminAPI = {
+  // Helper: Get admin headers
+  getAdminHeaders() {
+    const currentUser = AuthManager.getCurrentUser();
+    
+    if (!currentUser || currentUser.userRole !== 'admin') {
+      throw new Error('Admin access required');
+    }
+    
+    return {
+      'Content-Type': 'application/json',
+      'x-user-role': currentUser.userRole,
+      'x-user-id': currentUser.userId?.toString() || '',
+      'x-admin-id': currentUser.userId?.toString() || ''
+    };
+  },
+
   async loadUsers() {
     showLoading(true);
 
     try {
       log('Starting to load users...');
-      let response;
-      let usersData = [];
+      
+      // Get admin headers
+      const headers = this.getAdminHeaders();
+      
+      // Call API with proper headers
+      const response = await fetch(`${CONFIG.API_BASE_URL}/users/admin/all`, {
+        method: 'GET',
+        headers: headers
+      });
 
-      // Try main API endpoint
-      try {
-        response = await fetch(`${CONFIG.API_BASE_URL}/admin/users`);
-        if (response.ok) {
-          const data = await response.json();
-          usersData = data.users || data.data || data;
-        }
-      } catch (err) {
-        log('Admin endpoint failed, trying fallback', err, 'warn');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Try fallback endpoint if main failed
-      if (!usersData || usersData.length === 0) {
-        try {
-          const res = await fetch('/api/admin/users/mock');
-          if (res.ok) {
-            const mockData = await res.json();
-            usersData = mockData.users || mockData.data || mockData;
-            log('Loaded data from /api/admin/users/mock', { count: usersData.length });
-            updateConnectionStatus('offline');
-            showToast('Warning', 'Using mock data from server - database unavailable', 'warning', 4000);
-          }
-        } catch (err) {
-          log('Mock endpoint also failed', err, 'error');
-        }
-      }
+      const data = await response.json();
+      const usersData = data.users || data.data || data;
 
       // Validate data
       if (!usersData || usersData.length === 0) {
-        showError('Failed to load users. Please check your database connection.');
+        showError('No users found in database.');
         updateConnectionStatus('offline');
         return;
       }
@@ -63,7 +67,7 @@ const AdminAPI = {
       
     } catch (err) {
       log('Error loading users', err, 'error');
-      showError('Failed to load users. Please check your database connection.');
+      showError('Failed to load users: ' + err.message);
       updateConnectionStatus('offline');
     } finally {
       showLoading(false);
@@ -72,7 +76,6 @@ const AdminAPI = {
 
   // Normalize user data from different API formats
   normalizeUsersData(usersData) {
-    
     return usersData.map((user, idx) => ({
         id: Number(user.UserID ?? user.id ?? (idx + 1)),
         username: user.Username || user.username || `user${idx + 1}`,
@@ -88,26 +91,30 @@ const AdminAPI = {
         _debugUpdatedAt: user.UpdatedAt,
         _debugupdatedAt: user.updatedAt
     }));
-},
+  },
 
   // Create new user
   async createUser(userData) {
     try {
       log('Creating new user', userData);
       
-      let response;
-      try {
-        response = await makeAuthenticatedRequest(`${CONFIG.API_BASE_URL}/users/register`, {
-          method: 'POST',
-          body: JSON.stringify(userData)
-        });
-      } catch (error) {
-        log('Authenticated create failed, trying alternative', error, 'warn');
-        response = await makeAPICall('/users', 'POST', userData);
+      const headers = this.getAdminHeaders();
+      
+      const response = await fetch(`${CONFIG.API_BASE_URL}/users`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(userData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
+
+      const result = await response.json();
       
       // Format the new user data
-      const newUser = response.user || response.data || response;
+      const newUser = result.user || result.data || result;
       const formattedUser = {
         id: newUser.UserID || newUser.id || Date.now(),
         username: newUser.Username || newUser.username || userData.username,
@@ -136,158 +143,155 @@ const AdminAPI = {
   },
 
   // Update existing user
-async updateUser(userId, userData) {
-  try {
-    log('Starting user update', { userId, userData });
-    
-    const currentAdmin = AuthManager.getCurrentUser();
-    if (!currentAdmin || currentAdmin.userRole !== 'admin') {
-      throw new Error('Admin access required');
-    }
-    
-    const currentUserData = AdminState.getUserById(userId);
-    if (!currentUserData) {
-      throw new Error('User not found in local data');
-    }
-    
-    // Create detailed update payload
-    const updatePayload = {
-      username: userData.username || currentUserData.username,
-      email: userData.email || currentUserData.email,
-      phone: userData.phone !== undefined ? userData.phone : (currentUserData.phone || ''),
-      fullName: userData.fullName || currentUserData.fullName
-    };
-    
-    if (userData.hasOwnProperty('status')) {
-      updatePayload.status = userData.status;
-    } else {
-      updatePayload.status = currentUserData.status;
-    }
-    
-    if (userData.hasOwnProperty('accountType')) {
-      updatePayload.accountType = userData.accountType;
-    } else {
-      updatePayload.accountType = currentUserData.accountType;
-    }
-    
-    if (userData.hasOwnProperty('role')) {
-      updatePayload.role = userData.role;
-    } else {
-      updatePayload.role = currentUserData.role;
-    }
-    
-    // Add password only if provided
-    if (userData.password && userData.password.trim()) {
-      updatePayload.password = userData.password.trim();
-    }
-    
-    log('Final update payload', updatePayload);
-    
-    let response;
+  async updateUser(userId, userData) {
     try {
-      response = await makeAuthenticatedRequest(`${CONFIG.API_BASE_URL}/users/admin/update/${userId}`, {
+      log('Starting user update', { userId, userData });
+      
+      const headers = this.getAdminHeaders();
+      
+      const currentUserData = AdminState.getUserById(userId);
+      if (!currentUserData) {
+        throw new Error('User not found in local data');
+      }
+      
+      // Create detailed update payload
+      const updatePayload = {
+        username: userData.username || currentUserData.username,
+        email: userData.email || currentUserData.email,
+        phone: userData.phone !== undefined ? userData.phone : (currentUserData.phone || ''),
+        fullName: userData.fullName || currentUserData.fullName
+      };
+      
+      if (userData.hasOwnProperty('status')) {
+        updatePayload.status = userData.status;
+      } else {
+        updatePayload.status = currentUserData.status;
+      }
+      
+      if (userData.hasOwnProperty('accountType')) {
+        updatePayload.accountType = userData.accountType;
+      } else {
+        updatePayload.accountType = currentUserData.accountType;
+      }
+      
+      if (userData.hasOwnProperty('role')) {
+        updatePayload.role = userData.role;
+      } else {
+        updatePayload.role = currentUserData.role;
+      }
+      
+      // Add password only if provided
+      if (userData.password && userData.password.trim()) {
+        updatePayload.password = userData.password.trim();
+      }
+      
+      log('Final update payload', updatePayload);
+      
+      const response = await fetch(`${CONFIG.API_BASE_URL}/users/admin/update/${userId}`, {
         method: 'PUT',
+        headers: headers,
         body: JSON.stringify(updatePayload)
       });
-    } catch (error) {
-      log('Authenticated update failed, trying alternative', error, 'warn');
-      response = await makeAPICall(`/users/${userId}`, 'PUT', updatePayload);
-    }
 
-    // Log response để debug
-    log('API response received', response);
-    
-    if (response && response.user) {
-      const apiUser = response.user;
-      log('API returned user data', apiUser);
-      
-      const updatedUser = {
-        id: Number(userId),
-        username: apiUser.Username || apiUser.username,
-        fullName: apiUser.FullName || apiUser.fullName,
-        email: apiUser.Email || apiUser.email,
-        phone: apiUser.Phone || apiUser.phone || '',
-        role: (apiUser.UserRole || apiUser.role || 'user').toLowerCase(),
-        accountType: apiUser.AccountType || apiUser.accountType || 'free',
-        status: apiUser.UserStatus || apiUser.status || 'active',
-        createdAt: apiUser.CreatedAt || apiUser.createdAt,
-        updatedAt: apiUser.UpdatedAt || apiUser.updatedAt // Get from database
-      };
-      
-      log('Using UpdatedAt from API response', updatedUser.updatedAt);
-      
-      // Update state and UI immediately
-      AdminState.updateUser(userId, updatedUser);
-      updateStatistics();
-      renderUserTable();
-      
-      const changes = [];
-      if (currentUserData.status !== updatedUser.status) {
-        changes.push(`Status: ${currentUserData.status} → ${updatedUser.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
-      if (currentUserData.accountType !== updatedUser.accountType) {
-        changes.push(`Account Type: ${currentUserData.accountType} → ${updatedUser.accountType}`);
+
+      const result = await response.json();
+      log('API response received', result);
+      
+      if (result && result.user) {
+        const apiUser = result.user;
+        log('API returned user data', apiUser);
+        
+        const updatedUser = {
+          id: Number(userId),
+          username: apiUser.Username || apiUser.username,
+          fullName: apiUser.FullName || apiUser.fullName,
+          email: apiUser.Email || apiUser.email,
+          phone: apiUser.Phone || apiUser.phone || '',
+          role: (apiUser.UserRole || apiUser.role || 'user').toLowerCase(),
+          accountType: apiUser.AccountType || apiUser.accountType || 'free',
+          status: apiUser.UserStatus || apiUser.status || 'active',
+          createdAt: apiUser.CreatedAt || apiUser.createdAt,
+          updatedAt: apiUser.UpdatedAt || apiUser.updatedAt
+        };
+        
+        log('Using UpdatedAt from API response', updatedUser.updatedAt);
+        
+        // Update state and UI immediately
+        AdminState.updateUser(userId, updatedUser);
+        updateStatistics();
+        renderUserTable();
+        
+        const changes = [];
+        if (currentUserData.status !== updatedUser.status) {
+          changes.push(`Status: ${currentUserData.status} → ${updatedUser.status}`);
+        }
+        if (currentUserData.accountType !== updatedUser.accountType) {
+          changes.push(`Account Type: ${currentUserData.accountType} → ${updatedUser.accountType}`);
+        }
+        if (currentUserData.role !== updatedUser.role) {
+          changes.push(`Role: ${currentUserData.role} → ${updatedUser.role}`);
+        }
+        
+        let message = `User "${updatedUser.username}" updated successfully`;
+        if (changes.length > 0) {
+          message += `\nChanges: ${changes.join(', ')}`;
+        }
+        
+        showToast('Success', message, 'success', 4000);
+        log('User update completed successfully', { updatedUser, changes });
+        
+        return updatedUser;
+        
+      } else {
+        const updatedUser = {
+          id: Number(userId),
+          username: updatePayload.username,
+          fullName: updatePayload.fullName,
+          email: updatePayload.email,
+          phone: updatePayload.phone,
+          role: updatePayload.role,
+          accountType: updatePayload.accountType,
+          status: updatePayload.status,
+          createdAt: currentUserData.createdAt,
+          updatedAt: new Date().toISOString() 
+        };
+        
+        // Update state and UI immediately
+        AdminState.updateUser(userId, updatedUser);
+        updateStatistics();
+        renderUserTable();
+        
+        const changes = [];
+        if (currentUserData.status !== updatedUser.status) {
+          changes.push(`Status: ${currentUserData.status} → ${updatedUser.status}`);
+        }
+        if (currentUserData.accountType !== updatedUser.accountType) {
+          changes.push(`Account Type: ${currentUserData.accountType} → ${updatedUser.accountType}`);
+        }
+        if (currentUserData.role !== updatedUser.role) {
+          changes.push(`Role: ${currentUserData.role} → ${updatedUser.role}`);
+        }
+        
+        let message = `User "${updatedUser.username}" updated successfully`;
+        if (changes.length > 0) {
+          message += `\nChanges: ${changes.join(', ')}`;
+        }
+        
+        showToast('Success', message, 'success', 4000);
+        log('User update completed successfully (fallback mode)', { updatedUser, changes });
+        
+        return updatedUser;
       }
-      if (currentUserData.role !== updatedUser.role) {
-        changes.push(`Role: ${currentUserData.role} → ${updatedUser.role}`);
-      }
       
-      let message = `User "${updatedUser.username}" updated successfully`;
-      if (changes.length > 0) {
-        message += `\nChanges: ${changes.join(', ')}`;
-      }
-      
-      showToast('Success', message, 'success', 4000);
-      log('User update completed successfully', { updatedUser, changes });
-      
-      return updatedUser;
-      
-    } else {
-      const updatedUser = {
-        id: Number(userId),
-        username: updatePayload.username,
-        fullName: updatePayload.fullName,
-        email: updatePayload.email,
-        phone: updatePayload.phone,
-        role: updatePayload.role,
-        accountType: updatePayload.accountType,
-        status: updatePayload.status,
-        createdAt: currentUserData.createdAt,
-        updatedAt: new Date().toISOString() 
-      };
-      
-      // Update state and UI immediately
-      AdminState.updateUser(userId, updatedUser);
-      updateStatistics();
-      renderUserTable();
-      
-      const changes = [];
-      if (currentUserData.status !== updatedUser.status) {
-        changes.push(`Status: ${currentUserData.status} → ${updatedUser.status}`);
-      }
-      if (currentUserData.accountType !== updatedUser.accountType) {
-        changes.push(`Account Type: ${currentUserData.accountType} → ${updatedUser.accountType}`);
-      }
-      if (currentUserData.role !== updatedUser.role) {
-        changes.push(`Role: ${currentUserData.role} → ${updatedUser.role}`);
-      }
-      
-      let message = `User "${updatedUser.username}" updated successfully`;
-      if (changes.length > 0) {
-        message += `\nChanges: ${changes.join(', ')}`;
-      }
-      
-      showToast('Success', message, 'success', 4000);
-      log('User update completed successfully (fallback mode)', { updatedUser, changes });
-      
-      return updatedUser;
+    } catch (error) {
+      log('Error updating user', error, 'error');
+      throw new Error('Failed to update user: ' + error.message);
     }
-    
-  } catch (error) {
-    log('Error updating user', error, 'error');
-    throw new Error('Failed to update user: ' + error.message);
-  }
-},
+  },
 
   // Delete user
   async deleteUser(userId) {
@@ -306,13 +310,16 @@ async updateUser(userId, userData) {
     try {
       log('Deleting user', { userId, user });
       
-      try {
-        await makeAuthenticatedRequest(`${CONFIG.API_BASE_URL}/users/admin/delete/${userId}`, {
-          method: 'DELETE'
-        });
-      } catch (error) {
-        log('Authenticated delete failed, trying alternative', error, 'warn');
-        await makeAPICall(`/users/${userId}`, 'DELETE');
+      const headers = this.getAdminHeaders();
+      
+      const response = await fetch(`${CONFIG.API_BASE_URL}/users/admin/delete/${userId}`, {
+        method: 'DELETE',
+        headers: headers
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
       
       // Remove user from state and update UI

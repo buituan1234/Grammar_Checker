@@ -14,7 +14,6 @@ const validateText = (text) => {
   return { valid: true };
 };
 
-// Helper function to clean text
 const cleanText = (text) => {
   return text
     .normalize('NFKC')

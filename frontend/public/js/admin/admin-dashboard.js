@@ -14,7 +14,6 @@ class DashboardManager {
 
         this.updateConnectionStatus('connecting', 'Connecting to database...');
 
-        // ✅ Kiểm tra quyền admin bằng AuthManager
         if (!this.checkAdminAuth()) {
             this.updateConnectionStatus('error', 'Authentication failed');
             window.location.href = '/login.html';
@@ -43,9 +42,6 @@ class DashboardManager {
         if (connectionText) connectionText.textContent = text;
     }
 
-    /**
-     * ✅ Kiểm tra quyền admin qua AuthManager
-     */
     checkAdminAuth() {
         if (typeof AuthManager === 'undefined' || typeof AuthManager.getCurrentUser !== 'function') {
             console.error('AuthManager not found or invalid');
@@ -109,6 +105,8 @@ class DashboardManager {
             this.updateCharts();
             this.updateConnectionStatus('connected', 'Connected to Database');
 
+            console.log('✅ Dashboard data loaded successfully');
+
         } catch (err) {
             console.error('❌ Error loading dashboard data:', err);
             this.updateConnectionStatus('error', 'Connection failed');
@@ -120,9 +118,6 @@ class DashboardManager {
         }
     }
 
-    /**
-     * ✅ Fetch có xác thực (dựa trên AuthManager)
-     */
     async fetchWithAuth(url, options = {}) {
         if (!this.currentUser) {
             throw new Error('Unauthorized: missing admin session');
@@ -143,13 +138,11 @@ class DashboardManager {
         return json.data;
     }
 
-    // === API LAYER ===
     async fetchOverviewStats() { return await this.fetchWithAuth('/api/stats/overview'); }
     async fetchAccountTypesStats() { return await this.fetchWithAuth('/api/stats/account-types'); }
     async fetchLanguageStats(days = 30) { return await this.fetchWithAuth(`/api/stats/languages?days=${days}`); }
     async fetchTimeframeStats(range = 'day') { return await this.fetchWithAuth(`/api/stats/timeframe?range=${range}&action=grammar_check`); }
 
-    // === UI UPDATE ===
     updateOverviewCards() {
         const o = this.data.overview || {};
         document.getElementById('totalUsersCount').textContent = o.total_users || 0;
@@ -168,6 +161,7 @@ class DashboardManager {
     }
 
     updateCharts() {
+        console.log('🎨 Updating charts...');
         this.updateAccountTypesChart();
         this.updateLanguagesChart();
         this.updateTimelineChart();
@@ -176,9 +170,17 @@ class DashboardManager {
     updateAccountTypesChart() {
         const canvas = document.getElementById('accountTypesChart');
         const data = this.data.accountTypes?.breakdown;
-        if (!canvas || !data) return;
+        
+        console.log('📊 Account Types Chart:', { canvas: !!canvas, data: !!data, dataLength: data?.length });
+        
+        if (!canvas || !data) {
+            console.warn('❌ Cannot update Account Types chart - missing canvas or data');
+            return;
+        }
 
-        if (this.charts.accountTypes) this.charts.accountTypes.destroy();
+        if (this.charts.accountTypes) {
+            this.charts.accountTypes.destroy();
+        }
 
         const ctx = canvas.getContext('2d');
         this.charts.accountTypes = new Chart(ctx, {
@@ -192,16 +194,32 @@ class DashboardManager {
                     borderColor: '#fff'
                 }]
             },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: true,
+                plugins: { 
+                    legend: { position: 'bottom' } 
+                } 
+            }
         });
+        
+        console.log('✅ Account Types chart created');
     }
 
     updateLanguagesChart() {
         const canvas = document.getElementById('languagesChart');
         const langs = this.data.languages?.languages;
-        if (!canvas || !langs) return;
+        
+        console.log('🌍 Languages Chart:', { canvas: !!canvas, langs: !!langs, langsLength: langs?.length });
+        
+        if (!canvas || !langs) {
+            console.warn('❌ Cannot update Languages chart - missing canvas or data');
+            return;
+        }
 
-        if (this.charts.languages) this.charts.languages.destroy();
+        if (this.charts.languages) {
+            this.charts.languages.destroy();
+        }
 
         const ctx = canvas.getContext('2d');
         const topLangs = langs.slice(0, 6);
@@ -216,16 +234,37 @@ class DashboardManager {
                     backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1']
                 }]
             },
-            options: { responsive: true, plugins: { legend: { display: false } } }
+            options: { 
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { 
+                    legend: { display: false } 
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
         });
+        
+        console.log('✅ Languages chart created');
     }
 
     updateTimelineChart(range = null) {
         const canvas = document.getElementById('timelineChart');
-        if (!canvas) return;
+        
+        console.log('📈 Timeline Chart:', { canvas: !!canvas, range, hasTimeframeData: !!this.data.timeframe });
+        
+        if (!canvas) {
+            console.warn('❌ Cannot update Timeline chart - missing canvas');
+            return;
+        }
 
         const timeframe = this.data.timeframe;
         if (range && range !== timeframe?.range) {
+            console.log('🔄 Fetching new timeframe data:', range);
             this.fetchTimeframeStats(range).then(data => {
                 this.data.timeframe = data;
                 this.updateTimelineChart();
@@ -233,8 +272,14 @@ class DashboardManager {
             return;
         }
 
-        if (!timeframe?.data) return;
-        if (this.charts.timeline) this.charts.timeline.destroy();
+        if (!timeframe?.data) {
+            console.warn('❌ Cannot update Timeline chart - missing timeframe data');
+            return;
+        }
+
+        if (this.charts.timeline) {
+            this.charts.timeline.destroy();
+        }
 
         const ctx = canvas.getContext('2d');
         this.charts.timeline = new Chart(ctx, {
@@ -250,8 +295,22 @@ class DashboardManager {
                     tension: 0.4
                 }]
             },
-            options: { responsive: true, plugins: { legend: { position: 'top' } } }
+            options: { 
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { 
+                    legend: { position: 'top' } 
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
         });
+        
+        console.log('✅ Timeline chart created');
     }
 
     async exportStatistics() {
@@ -287,13 +346,17 @@ class DashboardManager {
     }
 
     showLoading(show) {
-        document.getElementById('dashboardLoading')?.classList.toggle('hidden', !show);
-        document.getElementById('dashboardError')?.classList.add('hidden');
+        const loading = document.getElementById('dashboardLoading');
+        const error = document.getElementById('dashboardError');
+        if (loading) loading.classList.toggle('hidden', !show);
+        if (error) error.classList.add('hidden');
     }
 
     showError(show) {
-        document.getElementById('dashboardLoading')?.classList.add('hidden');
-        document.getElementById('dashboardError')?.classList.toggle('hidden', !show);
+        const loading = document.getElementById('dashboardLoading');
+        const error = document.getElementById('dashboardError');
+        if (loading) loading.classList.add('hidden');
+        if (error) error.classList.toggle('hidden', !show);
     }
 
     showExportLoading(show) {
@@ -307,7 +370,10 @@ class DashboardManager {
 
     showToast(title, msg, type = 'info', duration = 4000) {
         const container = document.getElementById('toastContainer');
-        if (!container) return console.log(`${title}: ${msg}`);
+        if (!container) {
+            console.log(`${title}: ${msg}`);
+            return;
+        }
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         toast.innerHTML = `<div class="toast-content"><strong>${title}</strong><p>${msg}</p></div>`;
@@ -316,10 +382,15 @@ class DashboardManager {
     }
 }
 
-// Initialize Dashboard
+if (typeof window !== 'undefined') {
+    window.DashboardManager = DashboardManager;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.__dashboardInitialized) {
         window.__dashboardInitialized = true;
-        new DashboardManager();
+        const dashboardInstance = new DashboardManager();
+        window.__dashboardManager = dashboardInstance;
+        console.log('✅ Dashboard initialized and exported to window');
     }
 });

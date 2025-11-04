@@ -1,4 +1,4 @@
-// backend/routes/userRoutes.js - FIXED VERSION WITH isAdmin MIDDLEWARE
+// backend/routes/userRoutes.js - UPDATED VERSION
 import express from 'express';
 import sql from 'mssql';
 import bcrypt from 'bcrypt';
@@ -18,7 +18,7 @@ function getDbPool(req) {
 const isAdmin = (req, res, next) => {
     console.log('🔐 Admin middleware - checking authorization...');
     const userRole = req.headers['x-user-role'] || req.body.userRole;
-    console.log(`🔍 Extracted user role: "${userRole}"`);
+    console.log(`🔐 Extracted user role: "${userRole}"`);
 
     if (userRole === 'admin') {
         console.log('✅ Admin access granted');
@@ -33,6 +33,50 @@ const isAdmin = (req, res, next) => {
         });
     }
 };
+
+// --- ✅ NEW: Admin: Get all users ---
+router.get('/admin/all', isAdmin, async (req, res) => {
+    console.log('📊 Admin fetching all users...');
+    
+    try {
+        const pool = getDbPool(req);
+        const request = pool.request();
+        
+        const query = `
+            SELECT 
+                UserID,
+                Username,
+                Email,
+                Phone,
+                UserRole,
+                FullName,
+                AccountType,
+                UserStatus,
+                FORMAT(CreatedAt, 'yyyy-MM-ddTHH:mm:ss.fffZ') as CreatedAt,
+                FORMAT(UpdatedAt, 'yyyy-MM-ddTHH:mm:ss.fffZ') as UpdatedAt
+            FROM Users
+            ORDER BY CreatedAt DESC
+        `;
+        
+        const result = await request.query(query);
+        
+        console.log(`✅ Retrieved ${result.recordset.length} users`);
+        
+        res.json({
+            success: true,
+            users: result.recordset,
+            count: result.recordset.length
+        });
+        
+    } catch (err) {
+        console.error('❌ Error fetching users:', err);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch users',
+            details: err.message
+        });
+    }
+});
 
 // --- Update user by ID (for admin.js fallback compatibility)
 router.put('/:id', async (req, res) => {
@@ -92,8 +136,8 @@ router.put('/:id', async (req, res) => {
 router.post('/register', async (req, res) => {
     const { username, password, email, phone, fullName } = req.body;
     
-    console.log('📝 User registration attempt - FULL REQUEST BODY:', req.body);
-    console.log('📝 Extracted fields:', {
+    console.log('🔐 User registration attempt - FULL REQUEST BODY:', req.body);
+    console.log('🔐 Extracted fields:', {
         username,
         password: password ? '***' : 'MISSING',
         email,
@@ -123,7 +167,7 @@ router.post('/register', async (req, res) => {
         request.input('username', sql.NVarChar(50), username);
         request.input('email', sql.NVarChar(100), email);
 
-        console.log('🔍 Checking for existing username/email...');
+        console.log('🔐 Checking for existing username/email...');
         const checkResult = await request.query`
             SELECT COUNT(*) AS count FROM Users WHERE Username = @username OR Email = @email;
         `;
@@ -371,7 +415,7 @@ router.put('/admin/update/:id', isAdmin, async (req, res) => {
     }
 });
 
-// --- ✅ FIXED: Admin: Create user (for admin panel) - NOW WITH isAdmin MIDDLEWARE
+// --- Admin: Create user (for admin panel)
 router.post('/', isAdmin, async (req, res) => {
     const { username, password, email, phone, fullName, role, accountType, status } = req.body;
 
@@ -401,7 +445,7 @@ router.post('/', isAdmin, async (req, res) => {
         request.input('username', sql.NVarChar(50), username);
         request.input('email', sql.NVarChar(100), email);
 
-        console.log('🔍 Checking for existing username/email...');
+        console.log('🔐 Checking for existing username/email...');
         const checkResult = await request.query`
             SELECT COUNT(*) AS count FROM Users WHERE Username = @username OR Email = @email;
         `;
@@ -435,7 +479,7 @@ router.post('/', isAdmin, async (req, res) => {
         const insertResult = await request.query(insertQuery);
         const newUserId = insertResult.recordset[0].NewUserID;
 
-        //CREATE WELCOME NOTIFICATION
+        // CREATE WELCOME NOTIFICATION
         try {
             const adminId = req.headers['x-admin-id'] || req.headers['x-user-id'];
             
